@@ -1,0 +1,14 @@
+.ninja_log
+.ninja_deps
+build.ninja
+*.iso
+*.log
+build/
+.buildcache/
+deps/edk2-ovmf
+.cache
+compile_commands.json
+
+boot_mods/test
+boot_mods/test.o
+.luarc.json
