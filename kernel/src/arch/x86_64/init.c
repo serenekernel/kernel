@@ -101,6 +101,7 @@ void arch_init_bsp() {
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) { printf("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id); }
 
     __atomic_store_n(&arch_ap_finished, 0, __ATOMIC_RELAXED);
+    while(1) { __asm__("hlt"); }
     //     enable_interrupts();
     //     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
     //         if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
