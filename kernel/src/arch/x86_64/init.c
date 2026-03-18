@@ -1,4 +1,8 @@
 #include "arch/hardware/lapic.h"
+#include "arch/interrupts.h"
+#include "arch/io.h"
+#include "common/dpc.h"
+#include "common/irql.h"
 
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
@@ -7,6 +11,7 @@
 #include <common/arch.h>
 #include <common/cpu_local.h>
 #include <common/interrupts.h>
+#include <common/io.h>
 #include <common/requests.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
@@ -91,31 +96,51 @@ void setup_arch() {
 
 static uint32_t arch_ap_finished = 0;
 
+void init_aps() {
+    __atomic_store_n(&arch_ap_finished, 0, __ATOMIC_RELAXED);
+    for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
+        if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
+
+        printf("Starting AP with lapic id %u\n", mp_request.response->cpus[i]->lapic_id);
+        atomic_store(&mp_request.response->cpus[i]->goto_address, &arch_init_ap);
+        while(__atomic_load_n(&arch_ap_finished, __ATOMIC_RELAXED) == 0) { arch_pause(); }
+    }
+}
+
 void arch_init_bsp() {
     init_cpu_local_bsp();
 
     setup_memory();
     setup_arch();
 
+    interrupts_enable();
+    assert(irql_get() == IRQL_PASSIVE);
     printf("Hello, %s!\n", arch_get_name());
-    for(size_t i = 0; i < mp_request.response->cpu_count; i++) { printf("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id); }
 
-    __atomic_store_n(&arch_ap_finished, 0, __ATOMIC_RELAXED);
+    init_cpu_locals(mp_request.response->cpu_count);
+    for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
+        printf("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id);
+        mp_request.response->cpus[i]->extra_argument = i;
+    }
+
+    init_aps();
+
     while(1) { __asm__("hlt"); }
-    //     enable_interrupts();
-    //     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
-    //         if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
-
-    //         printf("Starting AP with lapic id %u\n", mp_request.response->cpus[i]->lapic_id);
-    //         kernel_cpu_local_t* ap_cpu_local = (kernel_cpu_local_t*) vmm_alloc_object(&kernel_allocator, sizeof(kernel_cpu_local_t));
-    //         assert(ap_cpu_local != NULL && "Failed to allocate cpu local for ap");
-    //         mp_request.response->cpus[i]->extra_argument = (uint64_t) ap_cpu_local;
-    //         atomic_store(&mp_request.response->cpus[i]->goto_address, &arch_init_ap);
-    //         while(__atomic_load_n(&arch_ap_finished, __ATOMIC_RELAXED) == 0) { arch_pause(); }
-    //     }
-    // }
 }
+
 void arch_init_ap(struct limine_mp_info* info) {
     (void) info;
+    vm_paging_ap_init(&kernel_allocator);
+    vm_address_space_switch(&kernel_allocator);
+
+    init_cpu_local_ap(info->extra_argument);
+
+    setup_gdt();
+    dpc_init_queue();
+    interrupts_setup_ap();
+    lapic_init_ap();
+
+    printf("core %u started\n", info->extra_argument);
+
     while(1);
 }
