@@ -5,7 +5,6 @@
 #include <common/arch.h>
 #include <common/cpu_local.h>
 #include <common/interrupts.h>
-#include <common/process.h>
 #include <memory/vmm.h>
 #include <stdio.h>
 
@@ -33,7 +32,7 @@ const char* name_table[22] = { "Divide Error",
                                "Control Protection Exception" };
 
 __attribute__((noreturn)) void arch_panic_int(interrupt_frame_t* frame) {
-    disable_interrupts();
+    interrupts_disable();
     // ipi_t ipi;
     // ipi.type = IPI_DIE;
     // ipi_broadcast_async(&ipi);
@@ -111,17 +110,17 @@ __attribute__((noreturn)) void arch_panic_int(interrupt_frame_t* frame) {
     printf("r14 = 0x%016llx, r15 = 0x%016llx\n", regs->r14, regs->r15);
 
     printf("\n");
-    // if(x86_64_fred_enabled()) {
-    //     fred_frame_t* fred_frame = (fred_frame_t*) frame->internal_frame;
-    //     printf("cs  = 0x%016llx, rip = 0x%016llx\n", fred_frame->cs, fred_frame->rip);
-    //     printf("ss  = 0x%016llx, rsp = 0x%016llx\n", fred_frame->ss, fred_frame->rsp);
-    //     printf("rbp = 0x%016llx, rflags = 0x%016llx\n", frame->regs->rbp, fred_frame->rflags);
-    // } else {
-    //     idt_frame_t* idt_frame = (idt_frame_t*) frame->internal_frame;
-    //     printf("cs  = 0x%016llx, rip = 0x%016llx\n", idt_frame->cs, idt_frame->rip);
-    //     printf("ss  = 0x%016llx, rsp = 0x%016llx\n", idt_frame->ss, idt_frame->rsp);
-    //     printf("rbp = 0x%016llx, rflags = 0x%016llx\n", frame->regs->rbp, idt_frame->rflags);
-    // }
+    if(x86_64_fred_enabled()) {
+        fred_frame_t* fred_frame = (fred_frame_t*) frame->internal_frame;
+        printf("cs  = 0x%016llx, rip = 0x%016llx\n", fred_frame->cs, fred_frame->rip);
+        printf("ss  = 0x%016llx, rsp = 0x%016llx\n", fred_frame->ss, fred_frame->rsp);
+        printf("rbp = 0x%016llx, rflags = 0x%016llx\n", frame->regs->rbp, fred_frame->rflags);
+    } else {
+        idt_frame_t* idt_frame = (idt_frame_t*) frame->internal_frame;
+        printf("cs  = 0x%016llx, rip = 0x%016llx\n", idt_frame->cs, idt_frame->rip);
+        printf("ss  = 0x%016llx, rsp = 0x%016llx\n", idt_frame->ss, idt_frame->rsp);
+        printf("rbp = 0x%016llx, rflags = 0x%016llx\n", frame->regs->rbp, idt_frame->rflags);
+    }
     printf("error = 0x%016llx, interrupt data = 0x%016llx\n", frame->error, frame->interrupt_data);
 
     uint64_t cr0 = __read_cr0();

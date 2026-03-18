@@ -1,3 +1,5 @@
+#include "common/dpc.h"
+
 #include <assert.h>
 #include <common/irql.h>
 
@@ -19,6 +21,9 @@ irql_t irql_raise(irql_t new_level) {
 irql_t irql_lower(irql_t new_level) {
     irql_t old_irql = _arch_irql_get();
     assertf(old_irql >= new_level, "IRQL lowered below new level: old=%d new=%d", old_irql, new_level);
+
+    if(new_level <= IRQL_DISPATCH && !dpc_queue_empty()) { dpc_execute_all(); }
+
     if(old_irql != new_level) { _arch_irql_set(new_level); }
     return old_irql;
 }

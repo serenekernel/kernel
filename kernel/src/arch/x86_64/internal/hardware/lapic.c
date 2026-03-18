@@ -193,24 +193,23 @@ void lapic_configure() {
     lapic_write(LAPIC_SPURIOUS, spurious);
 }
 
-// void lapic_timer_init_bsp();
-// void lapic_timer_init_ap();
+void lapic_timer_init_bsp();
+void lapic_timer_init_ap();
 
 void lapic_init_bsp() {
     apic_enable_mode_bsp();
 
     lapic_configure();
-    // lapic_timer_init_bsp();
-    // ioapic_setup();
+    lapic_timer_init_bsp();
+    ioapic_setup();
     printf("initialized in %s mode for lapic %d (bsp)\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
 }
 
 void lapic_init_ap() {
-    disable_interrupts();
     apic_enable_mode_ap();
 
     lapic_configure();
-    // lapic_timer_init_ap();
+    lapic_timer_init_ap();
     printf("initialized in %s mode for lapic %d\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
 }
 

@@ -1,26 +1,26 @@
+#include <assert.h>
 #include <common/interrupts.h>
 #include <stdint.h>
-#include <assert.h>
 
 fn_interrupt_handler interrupt_handlers[256] = { 0 };
 
-void register_interrupt_handler(int vector, fn_interrupt_handler handler) {
+void interrupts_register_handler(int vector, fn_interrupt_handler handler) {
     assert(vector >= 0 && vector < 256);
     assert(interrupt_handlers[vector] == 0 && "Interrupt handler already registered for this vector");
     interrupt_handlers[vector] = handler;
 }
 
-void unregister_interrupt_handler(int vector) {
+void interrupts_unregister_handler(int vector) {
     assert(vector >= 0 && vector < 256);
     assert(interrupt_handlers[vector] != 0 && "No interrupt handler registered for this vector");
     interrupt_handlers[vector] = 0;
 }
 
-void enable_interrupts() {
+void interrupts_enable() {
     asm volatile("sti");
 }
 
-void disable_interrupts() {
+void interrupts_disable() {
     asm volatile("cli");
 }
 

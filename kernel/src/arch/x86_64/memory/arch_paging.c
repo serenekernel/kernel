@@ -5,7 +5,6 @@
 #include <common/cpu_local.h>
 #include <common/requests.h>
 #include <common/spinlock.h>
-#include <common/thread.h>
 #include <memory/memory.h>
 #include <memory/pagedb.h>
 #include <memory/pmm.h>

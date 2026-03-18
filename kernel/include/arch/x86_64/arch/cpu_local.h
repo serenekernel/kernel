@@ -1,5 +1,6 @@
 #pragma once
 #include <arch/internal/gdt.h>
+#include <common/dpc.h>
 #include <common/irql.h>
 #include <stddef.h>
 
@@ -7,6 +8,9 @@ typedef struct {
     tss_t* cpu_tss;
 
     irql_t current_irql;
+
+    dpc_queue_t* dpc_queue;
+
     bool preempt_pending;
 } kernel_cpu_local_t;
 

@@ -38,8 +38,9 @@ local c_flags = {
 
     "-Wimplicit-fallthrough",
     "-Wmissing-field-initializers",
-    
+
     "-fdiagnostics-color=always",
+    "-DUACPI_FORMATTED_LOGGING",
     "-DUACPI_BAREBONES_MODE",
     "-DLIMINE_API_REVISION=5"
 }
@@ -83,16 +84,25 @@ local limine_protocol = fab.git(
 local flanterm = fab.git(
     "flanterm",
     "https://codeberg.org/Mintsuki/Flanterm.git",
-    "trunk"
+    "b5038e828de1dc6c049222a3c1670f7976e6c5a3"
+)
+
+local uacpi = fab.git(
+    "uacpi",
+    "https://github.com/uACPI/uACPI.git",
+    "1ca45f34f3364344db0622615fb72a94a17b967a"
 )
 
 table.insert(include_dirs, c.include_dir(path(fab.build_dir(), limine_protocol.path, "include")))
 table.insert(include_dirs, c.include_dir(path(fab.build_dir(), flanterm.path, "src")))
+table.insert(include_dirs, c.include_dir(path(fab.build_dir(), uacpi.path, "include")))
 table.insert(include_dirs, c.include_dir(path(fab.build_dir(), freestanding_c_headers.path, opt_arch .. "/include")))
 
 local flanterm_sources = {}
 table.extend(flanterm_sources, sources(fab.glob("src/*.c", { relative_to = flanterm.path })))
 
+local uacpi_sources = {}
+table.extend(uacpi_sources, sources(fab.glob("source/*.c", { relative_to = uacpi.path })))
 
 if opt_arch == "x86_64" then
     -- Flags
@@ -120,8 +130,12 @@ local objects = {}
 local flanterm_objects = generate(flanterm_sources, {
     c = function(sources) return clang:generate(sources, c_flags, include_dirs) end
 })
+local uacpi_objects = generate(uacpi_sources, {
+    c = function(sources) return clang:generate(sources, c_flags, include_dirs) end
+})
 
 table.extend(objects, flanterm_objects)
+table.extend(objects, uacpi_objects)
 
 local kernel_flags = {}
 table.extend(kernel_flags, c_flags)

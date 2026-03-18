@@ -1,15 +1,19 @@
+#include "arch/hardware/lapic.h"
+
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
 #include <arch/internal/gdt.h>
 #include <assert.h>
 #include <common/arch.h>
 #include <common/cpu_local.h>
+#include <common/interrupts.h>
 #include <common/requests.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <uacpi/uacpi.h>
 
 void setup_protections() {
     arch_memory_barrier();
@@ -62,18 +66,27 @@ void setup_memory() {
     vm_paging_bsp_init(&kernel_allocator);
 
     vm_map_kernel();
-    printf("we pray\n");
     vm_address_space_switch(&kernel_allocator);
-    printf("we didn't die\n");
 
     setup_protections();
 }
 
-void setup_arch() {
-    setup_gdt();
+void setup_acpi() {
+    virt_addr_t temp_buffer = vmm_alloc_object(&kernel_allocator, 4096);
+    uacpi_status ret = uacpi_setup_early_table_access((void*) temp_buffer, 4096);
+    assertf(!uacpi_unlikely_error(ret), "uacpi_setup_early_table_access error: %s", uacpi_status_to_string(ret));
+}
 
+void setup_arch() {
     printf("CPU Vendor: %s\n", __cpuid_get_vendor_string());
     printf("CPU Name: %s\n", __cpuid_get_name_string());
+
+    setup_gdt();
+    dpc_init_queue();
+    interrupts_setup_bsp();
+
+    setup_acpi();
+    lapic_init_bsp();
 }
 
 static uint32_t arch_ap_finished = 0;
