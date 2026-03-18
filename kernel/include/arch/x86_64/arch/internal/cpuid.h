@@ -23,7 +23,7 @@ typedef enum {
     CPUID_EXTENDED_PROCESSOR_INFO = 0x80000001
 } cpuid_leaf_t;
 
-#define CPUID_FEATURE_DEFINE(name, __leaf, __subleaf, __reg, __bit) static cpuid_feature_t CPUID_FEATURE_##name = { .leaf = __leaf, .subleaf = __subleaf, .reg = __reg, .mask = (1 << __bit) };
+#define CPUID_FEATURE_DEFINE(name, __leaf, __subleaf, __reg, __bit) const static cpuid_feature_t CPUID_FEATURE_##name = { .leaf = __leaf, .subleaf = __subleaf, .reg = __reg, .mask = (1 << __bit) };
 
 CPUID_FEATURE_DEFINE(X2APIC, CPUID_GET_FEATURES, 0, CPUID_ECX, 21);
 CPUID_FEATURE_DEFINE(PAT, CPUID_GET_FEATURES, 0, CPUID_EDX, 16);
