@@ -95,6 +95,14 @@ int snprintf(char* buffer, size_t bufsz, const char* fmt, ...) {
 
 static spinlock_t printf_lock = {};
 
+irql_t stdio_lock() {
+    return spinlock_lock(&printf_lock);
+}
+
+void stdio_unlock(irql_t irql) {
+    spinlock_unlock(&printf_lock, irql);
+}
+
 int nl_vprintf(const char* fmt, va_list val) {
     char buffer[1024];
     const int rv = npf_vsnprintf(buffer, 1024, fmt, val);
