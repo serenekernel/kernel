@@ -30,6 +30,5 @@ typedef struct fred_frame {
 
 
 // Sets the stack to be used when being interrupted from ring 3
-
 void x86_64_set_rsp0_stack(virt_addr_t stack);
 bool x86_64_fred_enabled();
