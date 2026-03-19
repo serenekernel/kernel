@@ -142,6 +142,7 @@ void* slab_cache_alloc(slab_cache_t* cache) {
     if(cc->primary->rounds > 0) {
         void* ptr = cc->primary->objects[--cc->primary->rounds];
         spinlock_unlock(&cc->lock);
+        irql_lower(__irql);
         return ptr;
     }
 
