@@ -15,20 +15,20 @@ typedef struct pmm_node {
 pmm_node_t* head = NULL;
 spinlock_t pmm_lock = SPINLOCK_INIT;
 phys_addr_t pmm_alloc_page() {
-    irql_t __irql = spinlock_lock(&pmm_lock);
+    spinlock_lock(&pmm_lock);
     pmm_node_t* current = head;
     assert(current != NULL && "out of physical memory");
     head = head->next;
-    spinlock_unlock(&pmm_lock, __irql);
+    spinlock_unlock(&pmm_lock);
     return (phys_addr_t) FROM_HHDM(current);
 }
 
 void pmm_free_page(phys_addr_t addr) {
     pmm_node_t* node = (pmm_node_t*) TO_HHDM(addr);
-    irql_t __irql = spinlock_lock(&pmm_lock);
+    spinlock_lock(&pmm_lock);
     node->next = head;
     head = node;
-    spinlock_unlock(&pmm_lock, __irql);
+    spinlock_unlock(&pmm_lock);
 }
 
 void pmm_init() {

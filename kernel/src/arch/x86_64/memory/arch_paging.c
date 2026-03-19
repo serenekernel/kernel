@@ -171,7 +171,7 @@ void vm_unmap_pages_continuous(vm_allocator_t* allocator, virt_addr_t virt_addr,
 
 
 void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t phys_addr, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     vm_flags_data_t flags_data = convert_vm_flags(flags);
     arch_memory_barrier();
 
@@ -185,11 +185,11 @@ void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t p
     uint16_t pt_index = (uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT);
     pt[pt_index] = page_entry;
     arch_memory_barrier();
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
 }
 
 void vm_reprotect_page(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     vm_flags_data_t flags_data = convert_vm_flags(flags);
     uint64_t imtermediate_flags = PAGE_PRESENT_BIT | PAGE_RW_BIT;
 
@@ -203,37 +203,37 @@ void vm_reprotect_page(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_acce
 
     pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)] = page_entry;
     vm_flush_page_dispatch(virt_addr);
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
 }
 
 phys_addr_t vm_resolve(vm_allocator_t* allocator, virt_addr_t virt_addr) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     uint64_t* pt = walk_if_exists(allocator, virt_addr);
     if(pt == NULL) {
-        spinlock_unlock(&allocator->lock, __irql);
+        spinlock_unlock(&allocator->lock);
         return 0;
     }
 
     uint64_t page_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
     if(!(page_entry & PAGE_PRESENT_BIT)) {
-        spinlock_unlock(&allocator->lock, __irql);
+        spinlock_unlock(&allocator->lock);
         return 0;
     }
 
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
     return page_entry & SMALL_PAGE_ADDRESS_MASK;
 }
 
 phys_addr_t vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_flags_t* out_protection, vm_access_t* out_access) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     uint64_t* pt = walk_if_exists(allocator, virt_addr);
     if(pt == NULL) {
-        spinlock_unlock(&allocator->lock, __irql);
+        spinlock_unlock(&allocator->lock);
         return 0;
     }
 
     uint64_t page_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
 
     vm_flags_t protections = VM_READ_ONLY;
     if(page_entry & PAGE_RW_BIT) { protections |= VM_READ_WRITE; }
@@ -258,18 +258,18 @@ phys_addr_t vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_a
 }
 
 void vm_unmap_page(vm_allocator_t* allocator, virt_addr_t virt_addr) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     arch_memory_barrier();
     uint64_t* pt = walk_if_exists(allocator, virt_addr);
     if(pt == NULL) {
-        spinlock_unlock(&allocator->lock, __irql);
+        spinlock_unlock(&allocator->lock);
         return;
     }
 
     pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)] = 0;
     vm_flush_page_dispatch(virt_addr);
     arch_memory_barrier();
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
 }
 
 
@@ -401,11 +401,11 @@ void vm_paging_ap_init(vm_allocator_t* allocator) {
 // }
 
 void vm_remap_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t new_phys_addr) {
-    irql_t __irql = spinlock_lock(&allocator->lock);
+    spinlock_lock(&allocator->lock);
     arch_memory_barrier();
     uint64_t* pt = walk_if_exists(allocator, virt_addr);
     if(pt == NULL) {
-        spinlock_unlock(&allocator->lock, __irql);
+        spinlock_unlock(&allocator->lock);
         return;
     }
 
@@ -415,5 +415,5 @@ void vm_remap_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t
     pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)] = page_entry | PAGE_PRESENT_BIT;
     vm_flush_page_dispatch(virt_addr);
     arch_memory_barrier();
-    spinlock_unlock(&allocator->lock, __irql);
+    spinlock_unlock(&allocator->lock);
 }

@@ -70,9 +70,9 @@ void uacpi_kernel_log(uacpi_log_level level, const uacpi_char* fmt, ...) {
 }
 
 void uacpi_kernel_vlog(uacpi_log_level level, const uacpi_char* fmt, uacpi_va_list args) {
-    const irql_t irql = stdio_lock();
+    stdio_lock();
     nl_printf("[uacpi log %d]: ", level);
     nl_vprintf(fmt, args);
     nl_printf("\n");
-    stdio_unlock(irql);
+    stdio_unlock();
 }

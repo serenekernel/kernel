@@ -17,20 +17,19 @@ static inline void spinlock_lock_raw(volatile spinlock_t* lock) {
     }
 }
 
-
-irql_t spinlock_lock(spinlock_t* lock) {
+void spinlock_lock(spinlock_t* lock) {
     irql_t prev = irql_raise(IRQL_DISPATCH);
     spinlock_lock_raw(lock);
-    return prev;
+    lock->__locked_irql = prev;
 }
 
-irql_t spinlock_lock_raise(spinlock_t* lock, irql_t irql) {
+void spinlock_lock_raise(spinlock_t* lock, irql_t irql) {
     irql_t prev = irql_raise(irql);
     spinlock_lock_raw(lock);
-    return prev;
+    lock->__locked_irql = prev;
 }
 
-void spinlock_unlock(spinlock_t* lock, irql_t irql) {
+void spinlock_unlock(spinlock_t* lock) {
     spinlock_unlock_raw(lock);
-    irql_lower(irql);
+    irql_lower(lock->__locked_irql);
 }

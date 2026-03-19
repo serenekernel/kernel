@@ -39,13 +39,13 @@ void dpc_enqueue(dpc_t* dpc, void* arg) {
     dpc_queue_t* queue = CPU_LOCAL_READ(dpc_queue);
     assert(queue != NULL);
 
-    irql_t __irql = spinlock_lock(&queue->lock);
+    spinlock_lock(&queue->lock);
 
     dpc->next = queue->head;
     if(queue->head != NULL) { queue->head->prev = dpc; }
     queue->head = dpc;
 
-    spinlock_unlock(&queue->lock, __irql);
+    spinlock_unlock(&queue->lock);
 }
 
 bool dpc_queue_empty() {
@@ -59,7 +59,7 @@ void dpc_execute_all() {
     dpc_queue_t* queue = CPU_LOCAL_READ(dpc_queue);
     assert(queue != NULL);
 
-    irql_t __irql = spinlock_lock(&queue->lock);
+    spinlock_lock(&queue->lock);
 
     dpc_t* dpc = queue->head;
     while(dpc != NULL) {
@@ -70,5 +70,5 @@ void dpc_execute_all() {
     }
     queue->head = NULL;
 
-    spinlock_unlock(&queue->lock, __irql);
+    spinlock_unlock(&queue->lock);
 }

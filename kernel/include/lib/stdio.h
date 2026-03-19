@@ -10,8 +10,8 @@ int snprintf(char* buffer, size_t bufsz, const char* fmt, ...);
 int vprintf(const char* fmt, va_list val);
 int printf(const char* fmt, ...);
 
-irql_t stdio_lock();
-void stdio_unlock(irql_t irql);
+void stdio_lock();
+void stdio_unlock();
 
 int nl_vprintf(const char* fmt, va_list val);
 int nl_printf(const char* fmt, ...);

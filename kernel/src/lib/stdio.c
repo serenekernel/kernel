@@ -95,12 +95,12 @@ int snprintf(char* buffer, size_t bufsz, const char* fmt, ...) {
 
 static spinlock_t printf_lock = {};
 
-irql_t stdio_lock() {
-    return spinlock_lock(&printf_lock);
+void stdio_lock() {
+    spinlock_lock(&printf_lock);
 }
 
-void stdio_unlock(irql_t irql) {
-    spinlock_unlock(&printf_lock, irql);
+void stdio_unlock() {
+    spinlock_unlock(&printf_lock);
 }
 
 int nl_vprintf(const char* fmt, va_list val) {
@@ -124,10 +124,10 @@ int nl_printf(const char* fmt, ...) {
 int vprintf(const char* fmt, va_list val) {
     char buffer[1024];
     const int rv = npf_vsnprintf(buffer, 1024, fmt, val);
-    irql_t __irql = spinlock_lock(&printf_lock);
+    spinlock_lock(&printf_lock);
     sink_debug(buffer);
     if(ft_ctx != NULL) { sink_flanterm(buffer); }
-    spinlock_unlock(&printf_lock, __irql);
+    spinlock_unlock(&printf_lock);
     return rv;
 }
 
