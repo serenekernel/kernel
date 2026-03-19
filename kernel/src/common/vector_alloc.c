@@ -1,6 +1,5 @@
-#include "common/irql.h"
-
 #include <assert.h>
+#include <common/irql.h>
 #include <common/spinlock.h>
 #include <common/vector_alloc.h>
 #include <stdbool.h>

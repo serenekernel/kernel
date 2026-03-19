@@ -1,11 +1,10 @@
-#include "common/irql.h"
-#include "common/spinlock.h"
-#include "linked_list.h"
-#include "memory/heap.h"
-
 #include <assert.h>
 #include <common/cpu_local.h>
 #include <common/dpc.h>
+#include <common/irql.h>
+#include <common/spinlock.h>
+#include <linked_list.h>
+#include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/vmm.h>
 

@@ -1,6 +1,5 @@
-#include "common/dpc.h"
-
 #include <assert.h>
+#include <common/dpc.h>
 #include <common/irql.h>
 
 // @note: these are internal methods

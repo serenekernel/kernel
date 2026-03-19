@@ -1,6 +1,5 @@
-#include "arch/internal/cr.h"
-
 #include <arch/hardware/lapic.h>
+#include <arch/internal/cr.h>
 #include <arch/internal/gdt.h>
 #include <common/arch.h>
 #include <common/interrupts.h>

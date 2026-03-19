@@ -1,9 +1,8 @@
 #pragma once
 
-#include "memory/memory.h"
-
 #include <common/spinlock.h>
 #include <lib/linked_list.h>
+#include <memory/memory.h>
 #include <stddef.h>
 #include <stdint.h>
 

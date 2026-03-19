@@ -1,8 +1,7 @@
-#include "common/irql.h"
-#include "common/spinlock.h"
-
 #include <assert.h>
+#include <common/irql.h>
 #include <common/requests.h>
+#include <common/spinlock.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
 #include <stddef.h>

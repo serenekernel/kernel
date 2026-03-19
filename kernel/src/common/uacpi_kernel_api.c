@@ -1,7 +1,6 @@
-#include "memory/vmm.h"
-
 #include <common/requests.h>
 #include <memory/memory.h>
+#include <memory/vmm.h>
 #include <stdio.h>
 #include <uacpi/kernel_api.h>
 #include <uacpi/status.h>

@@ -110,3 +110,8 @@ Cpp11BracedListStyle: false
 SortIncludes: CaseInsensitive
 IncludeBlocks: Regroup
 MainIncludeChar: Quote
+IncludeCategories:
+  - Regex: "^<.*>"
+    Priority: 1
+  - Regex: '^".*"'
+    Priority: 2

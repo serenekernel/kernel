@@ -1,6 +1,5 @@
-#include "arch/internal/cr.h"
-
 #include <arch/cpu_local.h>
+#include <arch/internal/cr.h>
 #include <common/irql.h>
 
 irql_t _arch_irql_set(irql_t new_irql) {
