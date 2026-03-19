@@ -80,13 +80,11 @@ void arch_wait_for_interrupt(void) {
 }
 
 uint32_t arch_get_core_id() {
-    return 0;
-    // return lapic_get_id();
+    return CPU_LOCAL_READ(core_id);
 }
 
 bool arch_is_bsp() {
-    return true;
-    // return lapic_is_bsp();
+    return CPU_LOCAL_READ(core_id) == 0;
 }
 
 uint64_t arch_get_flags() {
@@ -99,14 +97,6 @@ void arch_set_flags(uint64_t flags) {
     __asm__ volatile("pushq %0\n" "popfq\n" : : "r"(flags));
 }
 
-
-size_t arch_get_max_cpu_id(void) {
-    uint32_t highest_apic_id = 0;
-    for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
-        if(mp_request.response->cpus[i]->lapic_id > highest_apic_id) { highest_apic_id = mp_request.response->cpus[i]->lapic_id; }
-    }
-    return (size_t) highest_apic_id;
-}
 
 // void lapic_send_raw_ipi(uint32_t apic_id);
 // void lapic_broadcast_raw_ipi();
@@ -130,6 +120,10 @@ void arch_debug_putc(char c) {
 uint64_t __stack_chk_guard = 0xdeadbeefcafebabe;
 
 __attribute__((noreturn)) void __stack_chk_fail(void) {
-    // printf("Stack smashing detected on CPU %u\n", lapic_get_id());
+    printf("Stack smashing detected on CPU %u\n", arch_get_core_id());
     arch_die();
+}
+
+uint32_t arch_get_core_count() {
+    return mp_request.response->cpu_count;
 }

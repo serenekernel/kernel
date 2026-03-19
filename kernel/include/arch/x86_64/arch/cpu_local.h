@@ -12,6 +12,7 @@ typedef struct {
     dpc_queue_t* dpc_queue;
 
     bool preempt_pending;
+    uint32_t core_id;
 } kernel_cpu_local_t;
 
 #define CPU_LOCAL_READ(field)                                                                      \

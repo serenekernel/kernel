@@ -118,9 +118,12 @@ void arch_init_bsp() {
     printf("Hello, %s!\n", arch_get_name());
 
     init_cpu_locals(mp_request.response->cpu_count);
+
+    uint32_t current_core_id = 1;
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
         printf("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id);
-        mp_request.response->cpus[i]->extra_argument = i;
+        if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
+        mp_request.response->cpus[i]->extra_argument = current_core_id++;
     }
 
     init_aps();

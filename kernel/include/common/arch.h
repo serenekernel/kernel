@@ -21,7 +21,6 @@ void arch_set_flags(uint64_t flags);
 uint32_t arch_get_core_id();
 bool arch_is_bsp();
 
-size_t arch_get_max_cpu_id(void);
 void arch_debug_putc(char c);
 
 // Allows us to disable cr4.SMAP
@@ -34,23 +33,4 @@ bool arch_get_wp();
 bool arch_disable_wp();
 void arch_restore_wp(bool __prev);
 
-// Nice helper macros
-#define ENTER_ADDRESS_SWITCH()             \
-    arch_memory_barrier();                 \
-    phys_addr_t __cr3_prev = __read_cr3(); \
-    arch_memory_barrier();
-
-#define EXIT_ADDRESS_SWITCH() \
-    arch_memory_barrier();    \
-    __write_cr3(__cr3_prev);  \
-    arch_memory_barrier();
-
-#define ENTER_UAP_SECTION() bool __uap_prev = arch_disable_uap();
-
-#define EXIT_UAP_SECTION() arch_restore_uap(__uap_prev);
-
-#define ENTER_UNINTERRUPTIBLE_SECTION()     \
-    bool __irq_prev = interrupts_enabled(); \
-    disable_interrupts();
-#define EXIT_UNINTERRUPTIBLE_SECTION()  \
-    if(__irq_prev) enable_interrupts();
+uint32_t arch_get_core_count();
