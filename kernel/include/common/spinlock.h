@@ -9,7 +9,7 @@ typedef volatile struct {
     uint32_t __lock;
 } spinlock_t;
 
-#define SPINLOCK_INIT ((spinlock_t) { 0 })
+#define SPINLOCK_INIT ((spinlock_t) { 0, 0 })
 
 // @returns: the previous IRQL
 void spinlock_lock(spinlock_t* lock);
