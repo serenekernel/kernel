@@ -1,20 +1,21 @@
-#include "arch/hardware/lapic.h"
-#include "arch/interrupts.h"
-#include "arch/io.h"
-#include "common/dpc.h"
-#include "common/irql.h"
-
+#include <arch/hardware/lapic.h>
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
 #include <arch/internal/gdt.h>
+#include <arch/interrupts.h>
+#include <arch/io.h>
 #include <assert.h>
 #include <common/arch.h>
 #include <common/cpu_local.h>
+#include <common/dpc.h>
 #include <common/interrupts.h>
 #include <common/io.h>
+#include <common/irql.h>
 #include <common/requests.h>
+#include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
+#include <memory/slab.h>
 #include <memory/vmm.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -72,6 +73,8 @@ void setup_memory() {
 
     vm_map_kernel();
     vm_address_space_switch(&kernel_allocator);
+    slab_cache_init();
+    init_heap();
 
     setup_protections();
 }

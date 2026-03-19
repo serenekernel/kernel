@@ -1,3 +1,4 @@
+#include <arch/cpu_local.h>
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
 #include <arch/internal/gdt.h>
