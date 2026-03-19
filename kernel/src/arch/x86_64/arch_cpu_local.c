@@ -14,7 +14,7 @@ void init_cpu_local_bsp() {
 
 void init_cpu_locals(uint32_t core_count) {
     cpu_local_count = core_count;
-    cpu_local_storage = (kernel_cpu_local_t*) vmm_alloc_object(&kernel_allocator, sizeof(kernel_cpu_local_t) * cpu_local_count);
+    cpu_local_storage = (kernel_cpu_local_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(kernel_cpu_local_t) * cpu_local_count);
     memcpy(cpu_local_storage, (void*) &bsp_cpu_local, sizeof(kernel_cpu_local_t));
     __wrmsr(IA32_GS_BASE_MSR, (uint64_t) &cpu_local_storage[0]);
 }

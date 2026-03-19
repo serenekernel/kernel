@@ -56,7 +56,8 @@ virt_addr_t vmm_alloc(vm_allocator_t* allocator, size_t page_count);
 virt_addr_t vmm_alloc_demand(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags);
 virt_addr_t vmm_alloc_backed(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill);
 virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill);
-virt_addr_t vmm_alloc_object(vm_allocator_t* allocator, size_t object_size);
+virt_addr_t vmm_alloc_bytes(vm_allocator_t* allocator, size_t object_size);
+virt_addr_t vmm_alloc_aligned_bytes(vm_allocator_t* allocator, size_t object_size, size_t alignment);
 
 virt_addr_t vmm_copy_read_only(vm_allocator_t* dest_alloc, vm_allocator_t* src_alloc, virt_addr_t dest, virt_addr_t src, size_t size);
 

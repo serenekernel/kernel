@@ -77,7 +77,7 @@ void setup_memory() {
 }
 
 void setup_acpi() {
-    virt_addr_t temp_buffer = vmm_alloc_object(&kernel_allocator, 4096);
+    virt_addr_t temp_buffer = vmm_alloc_bytes(&kernel_allocator, 4096);
     uacpi_status ret = uacpi_setup_early_table_access((void*) temp_buffer, 4096);
     assertf(!uacpi_unlikely_error(ret), "uacpi_setup_early_table_access error: %s", uacpi_status_to_string(ret));
 }

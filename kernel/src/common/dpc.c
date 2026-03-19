@@ -8,7 +8,7 @@
 #include <memory/vmm.h>
 
 void dpc_init_queue() {
-    dpc_queue_t* queue = (dpc_queue_t*) vmm_alloc_object(&kernel_allocator, sizeof(dpc_queue_t));
+    dpc_queue_t* queue = (dpc_queue_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(dpc_queue_t));
     assert(queue != NULL);
 
     queue->head = NULL;
@@ -17,7 +17,7 @@ void dpc_init_queue() {
 }
 
 dpc_t* dpc_create(fn_dpc_handler_t handler) {
-    dpc_t* dpc = (dpc_t*) vmm_alloc_object(&kernel_allocator, sizeof(dpc_t));
+    dpc_t* dpc = (dpc_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(dpc_t));
     assert(dpc != NULL);
 
     dpc->handler = handler;

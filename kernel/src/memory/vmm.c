@@ -163,10 +163,24 @@ virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address,
     return new_node->base;
 }
 
-virt_addr_t vmm_alloc_object(vm_allocator_t* allocator, size_t object_size) {
+virt_addr_t vmm_alloc_bytes(vm_allocator_t* allocator, size_t object_size) {
     size_t page_count = ALIGN_UP(object_size, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
     vm_access_t access = allocator->is_user ? VM_ACCESS_USER : VM_ACCESS_KERNEL;
     return vmm_alloc_backed(allocator, page_count, access, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+}
+
+virt_addr_t vmm_alloc_aligned_bytes(vm_allocator_t* allocator, size_t object_size, size_t alignment) {
+    assert(IS_POWER_OF_TWO(alignment));
+    assert(alignment >= PAGE_SIZE_DEFAULT);
+
+    // Over-allocate by one extra `alignment` worth so we're guaranteed
+    // to find an aligned start regardless of where the VMM places the base.
+    size_t alloc_size = object_size + alignment;
+
+    virt_addr_t base = vmm_alloc_bytes(allocator, alloc_size);
+    if(!base) return 0;
+
+    return ALIGN_UP(base, alignment);
 }
 
 // @note: this allows source pages to be changed after copying
