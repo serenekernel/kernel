@@ -1,6 +1,6 @@
 #pragma once
-#include "common/spinlock.h"
-
+#include <common/spinlock.h>
+#include <lib/linked_list.h>
 #include <stdint.h>
 
 typedef struct dpc dpc_t;
@@ -8,16 +8,15 @@ typedef void (*fn_dpc_handler_t)(struct dpc* dpc, void* arg);
 
 typedef struct {
     spinlock_t lock;
-    dpc_t* head;
+    list_t dpc_list;
 } dpc_queue_t;
 
-typedef struct dpc {
+struct dpc {
     fn_dpc_handler_t handler;
     void* arg;
 
-    struct dpc* next;
-    struct dpc* prev;
-} dpc_t;
+    list_node_t list_node;
+};
 
 // @brief Initializes the DPC queue for this CPU.
 void dpc_init_queue();

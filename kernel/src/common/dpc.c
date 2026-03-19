@@ -1,5 +1,7 @@
 #include "common/irql.h"
 #include "common/spinlock.h"
+#include "linked_list.h"
+#include "memory/heap.h"
 
 #include <assert.h>
 #include <common/cpu_local.h>
@@ -8,29 +10,26 @@
 #include <memory/vmm.h>
 
 void dpc_init_queue() {
-    dpc_queue_t* queue = (dpc_queue_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(dpc_queue_t));
+    dpc_queue_t* queue = (dpc_queue_t*) heap_alloc(sizeof(dpc_queue_t));
     assert(queue != NULL);
 
-    queue->head = NULL;
+    queue->dpc_list = LIST_INIT;
     queue->lock = SPINLOCK_INIT;
     CPU_LOCAL_WRITE(dpc_queue, queue);
 }
 
 dpc_t* dpc_create(fn_dpc_handler_t handler) {
-    dpc_t* dpc = (dpc_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(dpc_t));
+    dpc_t* dpc = (dpc_t*) heap_alloc(sizeof(dpc_t));
     assert(dpc != NULL);
 
     dpc->handler = handler;
-    dpc->next = NULL;
-    dpc->prev = NULL;
 
     return dpc;
 }
 
 void dpc_destroy(dpc_t* dpc) {
     assert(dpc != NULL);
-
-    vmm_free(&kernel_allocator, (virt_addr_t) dpc);
+    heap_free(dpc, sizeof(dpc_t));
 }
 
 void dpc_enqueue(dpc_t* dpc, void* arg) {
@@ -40,18 +39,14 @@ void dpc_enqueue(dpc_t* dpc, void* arg) {
     assert(queue != NULL);
 
     spinlock_lock(&queue->lock);
-
-    dpc->next = queue->head;
-    if(queue->head != NULL) { queue->head->prev = dpc; }
-    queue->head = dpc;
-
+    list_push_back(&queue->dpc_list, &dpc->list_node);
     spinlock_unlock(&queue->lock);
 }
 
 bool dpc_queue_empty() {
     dpc_queue_t* queue = CPU_LOCAL_READ(dpc_queue);
     if(queue == NULL) return true;
-    return queue->head == NULL;
+    return queue->dpc_list.count == 0;
 }
 
 void dpc_execute_all() {
@@ -61,14 +56,12 @@ void dpc_execute_all() {
 
     spinlock_lock(&queue->lock);
 
-    dpc_t* dpc = queue->head;
-    while(dpc != NULL) {
-        dpc_t* next = dpc->next;
+    while(!dpc_queue_empty()) {
+        list_node_t* list_node = list_pop_front(&queue->dpc_list);
+        dpc_t* dpc = CONTAINER_OF(list_node, dpc_t, list_node);
         dpc->handler(dpc, dpc->arg);
         dpc_destroy(dpc);
-        dpc = next;
     }
-    queue->head = NULL;
 
     spinlock_unlock(&queue->lock);
 }
