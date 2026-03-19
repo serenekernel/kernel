@@ -11,9 +11,6 @@ typedef enum {
     VM_OPTIONS_BACKED
 } vm_node_options_t;
 
-// forward declare :3
-typedef struct memobj memobj_t;
-
 typedef struct {
     rb_node_t rb_node;
     uintptr_t base;
@@ -27,9 +24,6 @@ typedef struct {
             vm_flags_t flags;
             bool zero_fill;
         } demand;
-        struct {
-            memobj_t* memobj;
-        } memobj;
     } options;
 
 } vm_node_t;
