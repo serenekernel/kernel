@@ -6,11 +6,8 @@
 
 typedef struct {
     tss_t* cpu_tss;
-
     irql_t current_irql;
-
     dpc_queue_t* dpc_queue;
-
     bool preempt_pending;
     uint32_t core_id;
 } kernel_cpu_local_t;
