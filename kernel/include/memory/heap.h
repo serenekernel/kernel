@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <lib/math.h>
-#include <memory/heap.h>
 #include <memory/pmm.h>
 #include <memory/slab.h>
 
