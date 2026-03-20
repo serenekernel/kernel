@@ -1,3 +1,5 @@
+#include <arch/cpu_local.h>
+#include <arch/hardware/lapic.h>
 #include <arch/msr.h>
 #include <common/cpu_local.h>
 #include <memory/vmm.h>

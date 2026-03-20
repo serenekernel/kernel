@@ -10,6 +10,7 @@
 #include <common/dpc.h>
 #include <common/interrupts.h>
 #include <common/io.h>
+#include <common/ipi.h>
 #include <common/irql.h>
 #include <common/requests.h>
 #include <memory/heap.h>
@@ -120,6 +121,7 @@ void arch_init_bsp() {
     assert(irql_get() == IRQL_PASSIVE);
     printf("Hello, %s!\n", arch_get_name());
 
+    ipi_init_bsp();
     init_cpu_locals(mp_request.response->cpu_count);
 
     uint32_t current_core_id = 1;
@@ -131,7 +133,7 @@ void arch_init_bsp() {
 
     init_aps();
 
-    while(1) { __asm__("hlt"); }
+    while(1) { arch_wait_for_interrupt(); }
 }
 
 void arch_init_ap(struct limine_mp_info* info) {
@@ -145,8 +147,9 @@ void arch_init_ap(struct limine_mp_info* info) {
     dpc_init_queue();
     interrupts_setup_ap();
     lapic_init_ap();
+    ipi_init_ap();
 
     printf("core %u started\n", info->extra_argument);
 
-    while(1);
+    while(1) { arch_wait_for_interrupt(); }
 }

@@ -1,6 +1,7 @@
 #include <arch/hardware/lapic.h>
 #include <assert.h>
 #include <common/io.h>
+#include <common/vector_alloc.h>
 #include <memory/memory.h>
 #include <memory/vmm.h>
 #include <stddef.h>

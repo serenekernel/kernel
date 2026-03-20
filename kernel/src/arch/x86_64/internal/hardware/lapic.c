@@ -1,3 +1,4 @@
+#include <arch/cpu_local.h>
 #include <arch/hardware/lapic.h>
 #include <arch/internal/cpuid.h>
 #include <arch/msr.h>
@@ -235,29 +236,28 @@ void lapic_send_icr(uint32_t apic_id, uint64_t icr) {
     }
 }
 
-// void lapic_send_raw_ipi(uint32_t apic_id) {
-//     uint64_t icr = 0;
+void lapic_send_ipi(uint32_t apic_id, uint8_t vector) {
+    uint64_t icr = 0;
 
-//     icr |= LAPIC_SHORTHAND_NONE;
-//     icr |= LAPIC_TRIGGER_EDGE;
-//     icr |= LAPIC_LEVEL_DEASSERT;
-//     icr |= LAPIC_DESTMODE_PHYSICAL;
-//     icr |= LAPIC_DELMODE_FIXED;
-//     icr |= ipi_get_vector(); // vector
+    icr |= LAPIC_SHORTHAND_NONE;
+    icr |= LAPIC_TRIGGER_EDGE;
+    icr |= LAPIC_LEVEL_DEASSERT;
+    icr |= LAPIC_DESTMODE_PHYSICAL;
+    icr |= LAPIC_DELMODE_FIXED;
+    icr |= vector;
 
+    lapic_send_icr(apic_id, icr);
+}
 
-//     lapic_send_icr(apic_id, icr);
-// }
+void lapic_broadcast_ipi(uint8_t vector) {
+    uint64_t icr = 0;
 
-// void lapic_broadcast_raw_ipi() {
-//     uint64_t icr = 0;
+    icr |= LAPIC_SHORTHAND_ALL_EXCL_SELF;
+    icr |= LAPIC_TRIGGER_EDGE;
+    icr |= LAPIC_LEVEL_DEASSERT;
+    icr |= LAPIC_DESTMODE_PHYSICAL;
+    icr |= LAPIC_DELMODE_FIXED;
+    icr |= vector;
 
-//     icr |= LAPIC_SHORTHAND_ALL_EXCL_SELF;
-//     icr |= LAPIC_TRIGGER_EDGE;
-//     icr |= LAPIC_LEVEL_DEASSERT;
-//     icr |= LAPIC_DESTMODE_PHYSICAL;
-//     icr |= LAPIC_DELMODE_FIXED;
-//     icr |= ipi_get_vector(); // vector
-
-//     lapic_send_icr(0, icr);
-// }
+    lapic_send_icr(0, icr);
+}

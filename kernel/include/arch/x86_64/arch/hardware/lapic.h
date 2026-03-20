@@ -36,3 +36,7 @@ void ioapic_setup();
 void ioapic_mask_irq(uint8_t irq);
 void ioapic_unmask_irq(uint8_t irq);
 void lapic_send_init(uint32_t apic_id, uint32_t entry_point);
+
+
+void lapic_send_ipi(uint32_t apic_id, uint8_t vector);
+void lapic_broadcast_ipi(uint8_t vector);
