@@ -30,6 +30,7 @@ void spinlock_lock_raise(spinlock_t* lock, irql_t irql) {
 }
 
 void spinlock_unlock(spinlock_t* lock) {
+    irql_t irql = lock->__locked_irql;
     spinlock_unlock_raw(lock);
-    irql_lower(lock->__locked_irql);
+    irql_lower(irql);
 }
