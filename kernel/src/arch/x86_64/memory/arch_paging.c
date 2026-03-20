@@ -5,7 +5,7 @@
 #include <common/cpu_local.h>
 #include <common/ipi.h>
 #include <common/requests.h>
-#include <common/spinlock.h>
+#include <lib/spinlock.h>
 #include <memory/memory.h>
 #include <memory/pagedb.h>
 #include <memory/pmm.h>

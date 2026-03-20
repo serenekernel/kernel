@@ -1,5 +1,5 @@
 #include <common/arch.h>
-#include <common/spinlock.h>
+#include <lib/spinlock.h>
 
 static inline bool spinlock_try_lock(volatile spinlock_t* lock) {
     return !__atomic_test_and_set(&lock->__lock, __ATOMIC_ACQUIRE);

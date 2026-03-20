@@ -1,7 +1,7 @@
 #pragma once
 
-#include <common/spinlock.h>
 #include <lib/linked_list.h>
+#include <lib/spinlock.h>
 #include <memory/memory.h>
 #include <stddef.h>
 #include <stdint.h>

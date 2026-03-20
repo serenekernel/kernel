@@ -1,6 +1,6 @@
 #pragma once
-#include <common/spinlock.h>
 #include <lib/sparse_array.h>
+#include <lib/spinlock.h>
 #include <memory/memory.h>
 #include <rbtree.h>
 #include <stddef.h>

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <common/arch.h>
 #include <common/irql.h>
-#include <common/spinlock.h>
+#include <lib/spinlock.h>
 #include <linked_list.h>
 #include <memory/memory.h>
 #include <memory/slab.h>

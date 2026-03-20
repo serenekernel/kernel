@@ -14,9 +14,9 @@
 #include <common/arch.h>
 #include <common/io.h>
 #include <common/requests.h>
-#include <common/spinlock.h>
 #include <flanterm.h>
 #include <flanterm_backends/fb.h>
+#include <lib/spinlock.h>
 #include <nanoprintf.h>
 
 void sink_debug(char* c) {

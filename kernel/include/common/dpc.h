@@ -1,6 +1,6 @@
 #pragma once
-#include <common/spinlock.h>
 #include <lib/linked_list.h>
+#include <lib/spinlock.h>
 #include <stdint.h>
 
 typedef struct dpc dpc_t;

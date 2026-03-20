@@ -2,7 +2,7 @@
 #include <common/cpu_local.h>
 #include <common/dpc.h>
 #include <common/irql.h>
-#include <common/spinlock.h>
+#include <lib/spinlock.h>
 #include <linked_list.h>
 #include <memory/heap.h>
 #include <memory/memory.h>

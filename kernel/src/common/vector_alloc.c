@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <common/irql.h>
-#include <common/spinlock.h>
 #include <common/vector_alloc.h>
+#include <lib/spinlock.h>
 #include <stdbool.h>
 #include <stdint.h>
 
