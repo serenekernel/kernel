@@ -37,7 +37,7 @@ void dpc_enqueue(dpc_t* dpc, void* arg) {
     dpc_queue_t* queue = CPU_LOCAL_READ(dpc_queue);
     assert(queue != NULL);
 
-    spinlock_lock(&queue->lock);
+    spinlock_lock_raise(&queue->lock, IRQL_HIGH);
     list_push_back(&queue->dpc_list, &dpc->list_node);
     spinlock_unlock(&queue->lock);
 }
@@ -48,19 +48,30 @@ bool dpc_queue_empty() {
     return queue->dpc_list.count == 0;
 }
 
+void dpc_execute_front(dpc_queue_t* queue) {
+    assert(irql_get() == IRQL_DISPATCH);
+
+    spinlock_lock_raise(&queue->lock, IRQL_HIGH);
+    list_node_t* list_node = list_pop_front(&queue->dpc_list);
+    spinlock_unlock(&queue->lock);
+
+    dpc_t* dpc = CONTAINER_OF(list_node, dpc_t, list_node);
+    dpc->handler(dpc, dpc->arg);
+    dpc_destroy(dpc);
+}
+
 void dpc_execute_all() {
     assert(irql_get() == IRQL_DISPATCH);
     dpc_queue_t* queue = CPU_LOCAL_READ(dpc_queue);
     assert(queue != NULL);
 
-    spinlock_lock(&queue->lock);
+    while(true) {
+        spinlock_lock_raise(&queue->lock, IRQL_HIGH);
+        uint64_t dpc_count = queue->dpc_list.count;
+        spinlock_unlock(&queue->lock);
 
-    while(!dpc_queue_empty()) {
-        list_node_t* list_node = list_pop_front(&queue->dpc_list);
-        dpc_t* dpc = CONTAINER_OF(list_node, dpc_t, list_node);
-        dpc->handler(dpc, dpc->arg);
-        dpc_destroy(dpc);
+        if(dpc_count == 0) break;
+
+        dpc_execute_front(queue);
     }
-
-    spinlock_unlock(&queue->lock);
 }
