@@ -36,6 +36,7 @@ void ipi_init_ap(void) {
 }
 
 void ipi_broadcast_flush_tlb(virt_addr_t addr) {
+    if(g_ipi_structs == nullptr) return;
     for(uint32_t i = 0; i < arch_get_core_count(); i++) {
         if(i == arch_get_core_id()) continue;
 
@@ -51,6 +52,7 @@ void ipi_broadcast_flush_tlb(virt_addr_t addr) {
 }
 
 void ipi_broadcast_die() {
+    if(g_ipi_structs == nullptr) return;
     for(uint32_t i = 0; i < arch_get_core_count(); i++) {
         if(i == arch_get_core_id()) continue;
 
