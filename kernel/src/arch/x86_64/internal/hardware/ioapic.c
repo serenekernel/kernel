@@ -208,6 +208,8 @@ void ioapic_setup() {
     uacpi_for_each_subtable(tbl.hdr, sizeof(struct acpi_madt), second_madt_pass, NULL);
 
     if(ioapic_count > 0) {
+        assert(alloc_specific_interrupt_vector(0x20) == 0);
+
         ioapic_map_irq(&ioapics[0], 0, 0x20, lapic_get_id());
         ioapic_mask_irq(0);
     }
