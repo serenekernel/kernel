@@ -3,6 +3,7 @@
 #include <arch/msr.h>
 #include <common/arch.h>
 #include <common/cpu_local.h>
+#include <common/ipi.h>
 #include <common/requests.h>
 #include <common/spinlock.h>
 #include <memory/memory.h>
@@ -294,10 +295,7 @@ void vm_flush_page_raw(virt_addr_t addr) {
 
 void vm_flush_page_dispatch(virt_addr_t addr) {
     vm_flush_page_raw(addr);
-    // ipi_t ipi;
-    // ipi.type = IPI_TLB_FLUSH;
-    // ipi.tlb_flush.virt_addr = addr;
-    // ipi_broadcast_async(&ipi);
+    ipi_broadcast_flush_tlb(addr);
 }
 
 #define PAT_UNCACHEABLE 0

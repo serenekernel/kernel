@@ -5,6 +5,7 @@
 #include <common/arch.h>
 #include <common/cpu_local.h>
 #include <common/interrupts.h>
+#include <common/ipi.h>
 #include <memory/vmm.h>
 #include <stdio.h>
 
@@ -33,9 +34,7 @@ const char* name_table[22] = { "Divide Error",
 
 __attribute__((noreturn)) void arch_panic_int(interrupt_frame_t* frame) {
     interrupts_disable();
-    // ipi_t ipi;
-    // ipi.type = IPI_DIE;
-    // ipi_broadcast_async(&ipi);
+    ipi_broadcast_die();
     int apic_id = arch_get_core_id();
 
     if(frame->vector == 0x0E) {
