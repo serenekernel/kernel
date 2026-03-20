@@ -21,4 +21,9 @@ void init_cpu_locals(uint32_t core_count) {
 
 void init_cpu_local_ap(uint32_t core_id) {
     __wrmsr(IA32_GS_BASE_MSR, (uint64_t) &cpu_local_storage[core_id]);
+    cpu_local_storage[core_id].core_id = core_id;
+}
+
+uint32_t cpu_local_get_core_lapic_id(uint32_t core_id) {
+    return cpu_local_storage[core_id].lapic_id;
 }
