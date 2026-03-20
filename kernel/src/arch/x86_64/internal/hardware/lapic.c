@@ -10,8 +10,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "arch/cpu_local.h"
-
 // lapic registers
 #define LAPIC_ID 0x20
 #define LAPIC_VERSION 0x30
