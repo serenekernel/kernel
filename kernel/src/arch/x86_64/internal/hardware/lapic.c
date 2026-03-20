@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "arch/cpu_local.h"
+
 // lapic registers
 #define LAPIC_ID 0x20
 #define LAPIC_VERSION 0x30
@@ -198,6 +200,7 @@ void lapic_timer_init_ap();
 
 void lapic_init_bsp() {
     apic_enable_mode_bsp();
+    CPU_LOCAL_WRITE(lapic_id, lapic_get_id());
 
     lapic_configure();
     lapic_timer_init_bsp();
@@ -207,6 +210,7 @@ void lapic_init_bsp() {
 
 void lapic_init_ap() {
     apic_enable_mode_ap();
+    CPU_LOCAL_WRITE(lapic_id, lapic_get_id());
 
     lapic_configure();
     lapic_timer_init_ap();
