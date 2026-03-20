@@ -98,22 +98,6 @@ void arch_set_flags(uint64_t flags) {
     __asm__ volatile("pushq %0\n" "popfq\n" : : "r"(flags));
 }
 
-
-// void lapic_send_raw_ipi(uint32_t apic_id);
-// void lapic_broadcast_raw_ipi();
-
-// void arch_ipi_send_raw(uint32_t cpu_id) {
-//     lapic_send_raw_ipi(cpu_id);
-// }
-
-// void arch_ipi_broadcast_raw() {
-//     lapic_broadcast_raw_ipi();
-// }
-
-// void arch_ipi_eoi(void) {
-//     lapic_eoi();
-// }
-
 void arch_debug_putc(char c) {
     port_write_u8(0xe9, (uint8_t) c);
 }
