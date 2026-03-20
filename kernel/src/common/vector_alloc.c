@@ -15,11 +15,12 @@ uint8_t alloc_interrupt_vector(irql_t target_irql) {
     spinlock_lock(&g_vector_lock);
     assert(target_irql > 1 && target_irql <= 14 && "Invalid IRQL for interrupt vector allocation");
 
-    for(int v = VECTOR_START; v <= VECTOR_END; ++v) {
-        if(!g_vector_bitmap[v]) {
-            g_vector_bitmap[v] = 1;
+    for(int v = 0; v <= 0xf; ++v) {
+        uint8_t vector = (target_irql << 4) | v;
+        if(!g_vector_bitmap[vector]) {
+            g_vector_bitmap[vector] = 1;
             spinlock_unlock(&g_vector_lock);
-            return v;
+            return vector;
         }
     }
     spinlock_unlock(&g_vector_lock);
