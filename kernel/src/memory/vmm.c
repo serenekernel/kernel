@@ -85,16 +85,6 @@ virt_addr_t vmm_alloc(vm_allocator_t* allocator, size_t page_count) {
     return node->base;
 }
 
-virt_addr_t vmm_alloc_demand(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
-    vm_node_t* node = vmm_alloc_raw(allocator, page_count);
-    node->options_type = VM_OPTIONS_DEMAND;
-    node->options.demand.flags = flags;
-    node->options.demand.access = access;
-    node->options.demand.cache = cache;
-    node->options.demand.zero_fill = true;
-    return node->base;
-}
-
 virt_addr_t vmm_alloc_backed(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill) {
     vm_node_t* node = vmm_alloc_raw(allocator, page_count);
     assert(node != nullptr && "vmm_alloc_backed: failed to allocate vm_node");
@@ -211,7 +201,7 @@ void vmm_free(vm_allocator_t* allocator, virt_addr_t addr) {
 
     vm_node_t* vm_node = (vm_node_t*) node;
 
-    if(vm_node->options_type == VM_OPTIONS_BACKED || vm_node->options_type == VM_OPTIONS_DEMAND) {
+    if(vm_node->options_type == VM_OPTIONS_BACKED) {
         size_t page_count = vm_node->size / PAGE_SIZE_DEFAULT;
 
         for(size_t i = 0; i < page_count; i++) {

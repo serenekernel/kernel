@@ -7,7 +7,6 @@
 
 typedef enum {
     VM_OPTIONS_NONE = 0,
-    VM_OPTIONS_DEMAND,
     VM_OPTIONS_BACKED
 } vm_node_options_t;
 
@@ -18,14 +17,7 @@ typedef struct {
 
     vm_node_options_t options_type;
     union {
-        struct {
-            vm_cache_t cache;
-            vm_access_t access;
-            vm_flags_t flags;
-            bool zero_fill;
-        } demand;
     } options;
-
 } vm_node_t;
 
 typedef struct {
