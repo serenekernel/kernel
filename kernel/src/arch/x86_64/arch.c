@@ -102,13 +102,13 @@ void arch_debug_putc(char c) {
     port_write_u8(0xe9, (uint8_t) c);
 }
 
+uint32_t arch_get_core_count() {
+    return mp_request.response->cpu_count;
+}
+
 uint64_t __stack_chk_guard = 0xdeadbeefcafebabe;
 
 __attribute__((noreturn)) void __stack_chk_fail(void) {
     printf("Stack smashing detected on CPU %u\n", arch_get_core_id());
     arch_die();
-}
-
-uint32_t arch_get_core_count() {
-    return mp_request.response->cpu_count;
 }
