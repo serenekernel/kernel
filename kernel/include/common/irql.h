@@ -1,12 +1,11 @@
 #pragma once
 #include <stdint.h>
 
-typedef uint8_t irql_t;
-enum {
+typedef enum irql : uint8_t {
     IRQL_PASSIVE = 0,
     IRQL_DISPATCH = 2,
     IRQL_HIGH = 15
-};
+} irql_t;
 
 // Raises the IRQL to the next higher level
 // @returns: the previous IRQL level
