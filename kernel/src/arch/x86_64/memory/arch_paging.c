@@ -115,6 +115,21 @@ uint64_t convert_cache_flags(vm_cache_t cache, page_size_t page_size) {
     __builtin_unreachable();
 }
 
+uint64_t convert_vm_flags(vm_flags_t flags) {
+    bool present = !(flags & VM_NON_PRESENT);
+    bool global = (flags & VM_GLOBAL) != 0;
+    bool write = (flags & VM_READ_WRITE) != 0;
+    bool execute = (flags & VM_EXECUTE) != 0;
+
+    uint64_t result = 0;
+    if(present) result |= PAGE_PRESENT_BIT;
+    if(global) result |= PAGE_GLOBAL_BIT;
+    if(write) result |= PAGE_RW_BIT;
+    if(!execute) result |= PAGE_EXECUTE_DISABLE_BIT;
+
+    return result;
+}
+
 phys_addr_t __alloc_entry() {
     phys_addr_t phys = pmm_alloc_page();
     virt_addr_t virt = TO_HHDM(phys);
@@ -172,7 +187,6 @@ void vm_unmap_pages_continuous(vm_allocator_t* allocator, virt_addr_t virt_addr,
 
 void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t phys_addr, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
     spinlock_lock(&allocator->lock);
-    vm_flags_data_t flags_data = convert_vm_flags(flags);
     arch_memory_barrier();
 
     uint64_t imtermediate_flags = PAGE_PRESENT_BIT | PAGE_RW_BIT;
@@ -180,7 +194,7 @@ void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t p
     if(access == VM_ACCESS_USER) { imtermediate_flags |= PAGE_USER_BIT; }
 
     uint64_t* pt = walk_and_allocate(allocator, virt_addr, imtermediate_flags);
-    uint64_t page_entry = (phys_addr & SMALL_PAGE_ADDRESS_MASK) | (flags_data.present ? PAGE_PRESENT_BIT : 0) | (flags_data.write ? PAGE_RW_BIT : 0) | convert_access_flags(access) | convert_cache_flags(cache, PAGE_SIZE_SMALL);
+    uint64_t page_entry = (phys_addr & SMALL_PAGE_ADDRESS_MASK) | convert_vm_flags(flags) | convert_access_flags(access) | convert_cache_flags(cache, PAGE_SIZE_SMALL);
 
     uint16_t pt_index = (uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT);
     pt[pt_index] = page_entry;
@@ -190,13 +204,12 @@ void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t p
 
 void vm_reprotect_page(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
     spinlock_lock(&allocator->lock);
-    vm_flags_data_t flags_data = convert_vm_flags(flags);
     uint64_t imtermediate_flags = PAGE_PRESENT_BIT | PAGE_RW_BIT;
 
     if(access == VM_ACCESS_USER) { imtermediate_flags |= PAGE_USER_BIT; }
 
     uint64_t* pt = walk_and_allocate(allocator, virt_addr, imtermediate_flags);
-    uint64_t page_new_flags = (flags_data.present ? PAGE_PRESENT_BIT : 0) | (flags_data.write ? PAGE_RW_BIT : 0) | convert_access_flags(access) | convert_cache_flags(cache, PAGE_SIZE_SMALL);
+    uint64_t page_new_flags = convert_vm_flags(flags) | convert_access_flags(access) | convert_cache_flags(cache, PAGE_SIZE_SMALL);
 
     uint64_t old_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
     uint64_t page_entry = (old_entry & PAGE_ADDRESS_MASK(PAGE_SIZE_SMALL)) | page_new_flags;

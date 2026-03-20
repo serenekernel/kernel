@@ -31,17 +31,6 @@ typedef enum {
     VM_GLOBAL = (1 << 3),
 } vm_flags_t;
 
-typedef struct {
-    bool present    : 1;
-    bool readable   : 1;
-    bool write      : 1;
-    bool execute    : 1;
-    bool global     : 1;
-    bool __reserved : 1;
-} vm_flags_data_t;
-
-static_assert(sizeof(vm_flags_data_t) == sizeof(uint8_t), "vm_flags_data_t must be 1 byte some dumbass (me) broke it");
-
 typedef enum {
     VM_ACCESS_KERNEL,
     VM_ACCESS_USER,
@@ -53,7 +42,5 @@ typedef enum {
     VM_CACHE_WRITE_THROUGH,
     VM_CACHE_WRITE_COMBINE
 } vm_cache_t;
-
-vm_flags_data_t convert_vm_flags(vm_flags_t flags);
 
 const char* limine_memmap_type_to_str(uint64_t type);

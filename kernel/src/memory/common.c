@@ -15,19 +15,3 @@ const char* limine_memmap_type_to_str(uint64_t type) {
         default:                                   return "unknown";
     }
 }
-
-vm_flags_data_t convert_vm_flags(vm_flags_t flags) {
-    bool present = !(flags & VM_NON_PRESENT);
-    bool global = (flags & VM_GLOBAL) != 0;
-    bool write = (flags & VM_READ_WRITE) != 0;
-    bool execute = (flags & VM_EXECUTE) != 0;
-
-    return (vm_flags_data_t) {
-        .present = present,
-        .readable = true,
-        .write = write,
-        .execute = execute,
-        .global = global,
-        .__reserved = false,
-    };
-}
