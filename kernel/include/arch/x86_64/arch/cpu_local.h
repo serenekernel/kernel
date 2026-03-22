@@ -1,17 +1,26 @@
 #pragma once
 #include <arch/internal/gdt.h>
+#include <arch/sched/thread.h>
 #include <common/dpc.h>
 #include <common/irql.h>
 #include <stddef.h>
 
-typedef struct {
+typedef struct kernel_cpu_local kernel_cpu_local_t;
+
+struct kernel_cpu_local {
+    kernel_cpu_local_t* self;
     tss_t* cpu_tss;
     irql_t current_irql;
     dpc_queue_t* dpc_queue;
     bool preempt_pending;
     uint32_t core_id;
     uint32_t lapic_id;
-} kernel_cpu_local_t;
+
+    struct {
+        bool enabled;
+        virt_addr_t redirect;
+    } faultable;
+};
 
 #define CPU_LOCAL_READ(field)                                                                      \
     ({                                                                                             \

@@ -1,7 +1,10 @@
+#include <arch/cpu_local.h>
 #include <arch/hardware/lapic.h>
+#include <arch/internal/gdt.h>
 #include <arch/x86_64/arch/interrupts.h>
 #include <common/arch.h>
 #include <common/irql.h>
+#include <memory/memory.h>
 
 extern void setup_idt_bsp();
 extern void setup_idt_ap();
@@ -36,5 +39,22 @@ void x86_64_dispatch_interrupt(interrupt_frame_t* frame) {
 void x86_64_dispatch_exception(interrupt_frame_t* frame) {
     arch_restore_uap(true);
 
+    if(CPU_LOCAL_READ(faultable.enabled)) {
+        if(x86_64_fred_enabled()) {
+            fred_frame_t* fred_frame = (fred_frame_t*) frame->internal_frame;
+            fred_frame->rip = CPU_LOCAL_READ(faultable.redirect);
+        } else {
+            idt_frame_t* idt_frame = (idt_frame_t*) frame->internal_frame;
+            idt_frame->rip = CPU_LOCAL_READ(faultable.redirect);
+        }
+
+        return;
+    }
+
     arch_panic_int(frame);
+}
+
+void x86_64_set_rsp0_stack(virt_addr_t stack) {
+    tss_t* tss = CPU_LOCAL_READ(cpu_tss);
+    tss->rsp0 = stack;
 }

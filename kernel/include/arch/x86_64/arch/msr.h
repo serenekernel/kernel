@@ -33,5 +33,6 @@
 #define IA32_FRED_RSP3 0x000001CF
 #define IA32_FRED_STACK_LEVELS 0x000001D0
 
-[[nodiscard]] uint64_t __rdmsr(uint32_t msr);
-void __wrmsr(uint32_t msr, uint64_t value);
+[[nodiscard]] uint64_t read_msr(uint32_t msr);
+void write_msr(uint32_t msr, uint64_t value);
+bool probe_msr(uint32_t msr);

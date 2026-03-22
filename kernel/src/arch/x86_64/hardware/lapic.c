@@ -79,23 +79,23 @@ bool __x2apic_supported(void) {
 }
 
 uintptr_t lapic_get_base_address() {
-    return TO_HHDM(__rdmsr(IA32_APIC_BASE_MSR) & 0xFFFFF000);
+    return TO_HHDM(read_msr(IA32_APIC_BASE_MSR) & 0xFFFFF000);
 }
 
 static void apic_enable_mode_bsp() {
-    uint64_t msr = __rdmsr(IA32_APIC_BASE_MSR);
+    uint64_t msr = read_msr(IA32_APIC_BASE_MSR);
 
     if(!(msr & APIC_BASE_ENABLE)) {
         msr |= APIC_BASE_ENABLE;
-        __wrmsr(IA32_APIC_BASE_MSR, msr);
-        msr = __rdmsr(IA32_APIC_BASE_MSR);
+        write_msr(IA32_APIC_BASE_MSR, msr);
+        msr = read_msr(IA32_APIC_BASE_MSR);
     }
 
     x2apic_mode = __x2apic_supported();
 
     if(x2apic_mode) {
         msr |= APIC_BASE_X2APIC;
-        __wrmsr(IA32_APIC_BASE_MSR, msr);
+        write_msr(IA32_APIC_BASE_MSR, msr);
         printf("enabling in x2apic mode\n");
         return;
     }
@@ -110,15 +110,15 @@ static void apic_enable_mode_bsp() {
 }
 
 static void apic_enable_mode_ap(void) {
-    uint64_t msr = __rdmsr(IA32_APIC_BASE_MSR);
+    uint64_t msr = read_msr(IA32_APIC_BASE_MSR);
     msr |= APIC_BASE_ENABLE;
-    __wrmsr(IA32_APIC_BASE_MSR, msr);
+    write_msr(IA32_APIC_BASE_MSR, msr);
 }
 
 
 uint32_t lapic_read(uint32_t reg) {
     if(x2apic_mode) {
-        return (uint32_t) __rdmsr(IA32_X2APIC_BASE_MSR + (reg >> 4));
+        return (uint32_t) read_msr(IA32_X2APIC_BASE_MSR + (reg >> 4));
     } else {
         return mmio_read_u32(lapic_get_base_address() + reg);
     }
@@ -126,7 +126,7 @@ uint32_t lapic_read(uint32_t reg) {
 
 void lapic_write(uint32_t reg, uint32_t value) {
     if(x2apic_mode) {
-        __wrmsr(IA32_X2APIC_BASE_MSR + (reg >> 4), value);
+        write_msr(IA32_X2APIC_BASE_MSR + (reg >> 4), value);
     } else {
         mmio_write_u32(lapic_get_base_address() + reg, value);
     }
@@ -134,7 +134,7 @@ void lapic_write(uint32_t reg, uint32_t value) {
 
 uint64_t lapic_read64(uint32_t reg) {
     if(x2apic_mode) {
-        return __rdmsr(IA32_X2APIC_BASE_MSR + (reg >> 4));
+        return read_msr(IA32_X2APIC_BASE_MSR + (reg >> 4));
     } else {
         // @todo: im sure this doesn't work for ALL registers
         uint64_t val = 0;
@@ -146,7 +146,7 @@ uint64_t lapic_read64(uint32_t reg) {
 
 void lapic_write64(uint32_t reg, uint64_t value) {
     if(x2apic_mode) {
-        __wrmsr(IA32_X2APIC_BASE_MSR + (reg >> 4), value);
+        write_msr(IA32_X2APIC_BASE_MSR + (reg >> 4), value);
     } else {
         // For the ICR, the high word (destination) must be written BEFORE the
         // low word, because writing the low word causes the IPI to be dispatched.
@@ -165,7 +165,7 @@ uint32_t lapic_get_id() {
 }
 
 bool lapic_is_bsp() {
-    uint64_t msr = __rdmsr(IA32_APIC_BASE_MSR);
+    uint64_t msr = read_msr(IA32_APIC_BASE_MSR);
     return (msr & APIC_BASE_BSP) != 0;
 }
 

@@ -346,7 +346,7 @@ void __setup_pat() {
 
     uint64_t pat = pat0 | ((uint64_t) pat1 << 8) | ((uint64_t) pat2 << 16) | ((uint64_t) pat3 << 24) | ((uint64_t) pat4 << 32) | ((uint64_t) pat5 << 40) | ((uint64_t) pat6 << 48) | ((uint64_t) pat7 << 56);
 
-    __wrmsr(IA32_PAT_MSR, pat);
+    write_msr(IA32_PAT_MSR, pat);
 }
 
 void vm_address_space_switch(vm_allocator_t* allocator) {

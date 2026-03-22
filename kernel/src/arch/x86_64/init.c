@@ -3,7 +3,7 @@
 #include <arch/internal/cr.h>
 #include <arch/internal/gdt.h>
 #include <arch/interrupts.h>
-#include <arch/io.h>
+#include <arch/msr.h>
 #include <assert.h>
 #include <common/arch.h>
 #include <common/cpu_local.h>
@@ -149,7 +149,8 @@ void arch_init_ap(struct limine_mp_info* info) {
     lapic_init_ap();
     ipi_init_ap();
 
+    atomic_store(&arch_ap_finished, 1);
     printf("core %u started\n", info->extra_argument);
 
-    while(1) { arch_wait_for_interrupt(); }
+    while(1);
 }

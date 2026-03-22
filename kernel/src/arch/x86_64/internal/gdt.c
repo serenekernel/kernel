@@ -4,7 +4,10 @@
 #include <string.h>
 #include <arch/internal/gdt.h>
 #include <common/cpu_local.h>
+#include <memory/memory.h>
+#include <memory/vmm.h>
 #include <stdint.h>
+#include <string.h>
 
 typedef struct {
     uint16_t limit_low;
@@ -25,7 +28,6 @@ typedef struct {
     uint16_t limit;
     uint64_t base;
 } __attribute__((packed)) gdtr_t;
-
 
 typedef struct {
     gdt_entry_t null;
@@ -49,7 +51,6 @@ gdt_t gdt = {
 
 
 void gdt_set_tss(tss_t* tss) {
-    // Calculate TSS limit (size - 1)
     uint32_t tss_limit = sizeof(tss_t) - 1;
 
     gdt.tss.entry.limit_low = tss_limit & 0xFFFF;
@@ -68,7 +69,6 @@ void setup_gdt() {
     // Allocate enough pages for the TSS (needs more than 1 page now with I/O bitmap)
     size_t tss_pages = ALIGN_UP(sizeof(tss_t), PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
     virt_addr_t tss_virt = vmm_alloc_backed(&kernel_allocator, tss_pages, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
-    virt_addr_t rsp0_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
     virt_addr_t ist1_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
     virt_addr_t ist2_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
     virt_addr_t ist3_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
