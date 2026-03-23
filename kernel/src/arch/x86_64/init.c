@@ -13,6 +13,7 @@
 #include <common/ipi.h>
 #include <common/irql.h>
 #include <common/requests.h>
+#include <common/sched/sched.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
@@ -133,6 +134,9 @@ void arch_init_bsp() {
 
     init_aps();
 
+    sched_init_bsp();
+    sched_arch_handoff();
+
     while(1) { arch_wait_for_interrupt(); }
 }
 
@@ -151,6 +155,9 @@ void arch_init_ap(struct limine_mp_info* info) {
 
     atomic_store(&arch_ap_finished, 1);
     printf("core %u started\n", info->extra_argument);
+
+    sched_init_ap();
+    sched_arch_handoff();
 
     while(1);
 }

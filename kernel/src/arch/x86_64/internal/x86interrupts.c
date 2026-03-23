@@ -3,6 +3,7 @@
 #include <arch/internal/gdt.h>
 #include <arch/x86_64/arch/interrupts.h>
 #include <common/arch.h>
+#include <common/interrupts.h>
 #include <common/irql.h>
 #include <memory/memory.h>
 
@@ -28,7 +29,7 @@ void x86_64_dispatch_interrupt(interrupt_frame_t* frame) {
 
     irql_t __irql = irql_raise((frame->vector >> 4) & 0xf);
     lapic_eoi();
-
+    interrupts_enable();
     fn_interrupt_handler handler = interrupt_handlers[frame->vector];
     if(handler) { handler(frame); }
 

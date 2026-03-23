@@ -1,7 +1,4 @@
 #include <arch/cpu_local.h>
-#include <memory/memory.h>
-#include <memory/vmm.h>
-#include <string.h>
 #include <arch/internal/gdt.h>
 #include <common/cpu_local.h>
 #include <memory/memory.h>
@@ -64,6 +61,8 @@ void gdt_set_tss(tss_t* tss) {
 }
 
 extern void __load_gdt(gdtr_t* gdtr, uint16_t code_sel, uint16_t data_sel, uint16_t tss_sel);
+
+#define IST_PAGE_COUNT 4
 
 void setup_gdt() {
     // Allocate enough pages for the TSS (needs more than 1 page now with I/O bitmap)

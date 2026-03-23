@@ -6,13 +6,13 @@ fn_interrupt_handler interrupt_handlers[256] = { 0 };
 
 void interrupts_register_handler(int vector, fn_interrupt_handler handler) {
     assert(vector >= 0 && vector < 256);
-    assert(interrupt_handlers[vector] == 0 && "Interrupt handler already registered for this vector");
+    assertf(interrupt_handlers[vector] == 0, "Interrupt handler already registered for this vector %x", vector);
     interrupt_handlers[vector] = handler;
 }
 
 void interrupts_unregister_handler(int vector) {
     assert(vector >= 0 && vector < 256);
-    assert(interrupt_handlers[vector] != 0 && "No interrupt handler registered for this vector");
+    assertf(interrupt_handlers[vector] != 0, "No interrupt handler registered for this vector %x", vector);
     interrupt_handlers[vector] = 0;
 }
 

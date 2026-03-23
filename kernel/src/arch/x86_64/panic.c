@@ -7,6 +7,7 @@
 #include <common/interrupts.h>
 #include <common/ipi.h>
 #include <memory/vmm.h>
+#include <spinlock.h>
 #include <stdio.h>
 
 const char* name_table[22] = { "Divide Error",

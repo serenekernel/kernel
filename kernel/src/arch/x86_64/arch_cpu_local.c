@@ -2,11 +2,10 @@
 #include <arch/hardware/lapic.h>
 #include <arch/msr.h>
 #include <common/cpu_local.h>
-#include <memory/vmm.h>
-#include <string.h>
-
 #include <common/irql.h>
 #include <linked_list.h>
+#include <memory/vmm.h>
+#include <string.h>
 
 static volatile kernel_cpu_local_t bsp_cpu_local = { 0 };
 
@@ -20,6 +19,11 @@ void init_cpu_local_data(kernel_cpu_local_t* cpu_local, uint32_t core_id, uint32
     cpu_local->dpc_queue = NULL;
     cpu_local->preempt_pending = false;
     cpu_local->current_thread = NULL;
+    cpu_local->sched = (scheduler_t) {
+        .lock = SPINLOCK_INIT,
+        .thread_queue = LIST_INIT,
+        .idle_thread = NULL,
+    };
     cpu_local->self = cpu_local;
 }
 

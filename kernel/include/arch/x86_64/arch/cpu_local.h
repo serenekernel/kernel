@@ -3,11 +3,13 @@
 #include <arch/sched/thread.h>
 #include <common/dpc.h>
 #include <common/irql.h>
+#include <common/sched/sched.h>
 #include <stddef.h>
 
 typedef struct kernel_cpu_local kernel_cpu_local_t;
 
 struct kernel_cpu_local {
+    x86_64_thread_t* current_thread;
     kernel_cpu_local_t* self;
     tss_t* cpu_tss;
     irql_t current_irql;
@@ -15,6 +17,7 @@ struct kernel_cpu_local {
     bool preempt_pending;
     uint32_t core_id;
     uint32_t lapic_id;
+    scheduler_t sched;
 
     struct {
         bool enabled;

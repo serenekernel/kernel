@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <common/cpu_local.h>
 #include <common/dpc.h>
 #include <common/irql.h>
+#include <common/sched/sched.h>
 
 // @note: these are internal methods
 irql_t _arch_irql_set(irql_t new_irql);
@@ -26,6 +28,12 @@ irql_t irql_lower(irql_t new_level) {
     if(new_level <= IRQL_DISPATCH && !dpc_queue_empty()) {
         _arch_irql_set(IRQL_DISPATCH);
         dpc_execute_all();
+    }
+
+    if(new_level == IRQL_PASSIVE && CPU_LOCAL_EXCHANGE(preempt_pending, false)) {
+        _arch_irql_set(IRQL_PASSIVE);
+        sched_yield(THREAD_STATE_READY);
+        return old_irql;
     }
 
     _arch_irql_set(new_level);
