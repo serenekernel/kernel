@@ -82,3 +82,7 @@ typedef enum {
 } vm_fault_reason_t;
 
 bool vm_handle_page_fault(vm_fault_reason_t reason, virt_addr_t fault_address);
+
+
+void vm_memset(vm_allocator_t* allocator, virt_addr_t base, int value, size_t size);
+void* vm_memcpy(vm_allocator_t* dest_alloc, vm_allocator_t* src_alloc, virt_addr_t dest, virt_addr_t src, size_t size);

@@ -13,6 +13,7 @@ struct scheduler {
 };
 
 thread_t* sched_arch_create_thread_kernel(virt_addr_t entry);
+thread_t* sched_arch_create_thread_user(process_t* process, virt_addr_t entry);
 [[noreturn]] void sched_arch_handoff();
 void sched_init_bsp();
 void sched_init_ap();

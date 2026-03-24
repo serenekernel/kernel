@@ -82,3 +82,10 @@ struct kernel_cpu_local {
         uint8_t: CPU_LOCAL_DEC_8(FIELD),          \
         int8_t: CPU_LOCAL_DEC_8(FIELD)            \
     )
+
+
+#define CPU_LOCAL_GET_CURRENT_THREAD()                            \
+    ({                                                            \
+        x86_64_thread_t* thread = CPU_LOCAL_READ(current_thread); \
+        thread;                                                   \
+    })

@@ -9,4 +9,8 @@ typedef struct {
     uintptr_t kernel_stack_top;
 
     thread_t common;
+
+    void* fpu_area;
+    uintptr_t fsbase;
+    uintptr_t gsbase;
 } x86_64_thread_t;

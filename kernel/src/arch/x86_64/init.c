@@ -1,3 +1,4 @@
+#include <arch/hardware/fpu.h>
 #include <arch/hardware/lapic.h>
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
@@ -12,8 +13,11 @@
 #include <common/io.h>
 #include <common/ipi.h>
 #include <common/irql.h>
+#include <common/ldr/elf.h>
 #include <common/requests.h>
+#include <common/sched/process.h>
 #include <common/sched/sched.h>
+#include <common/userspace/userspace.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
@@ -21,6 +25,7 @@
 #include <memory/vmm.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <string.h>
 #include <uacpi/uacpi.h>
 
 void setup_protections() {
@@ -124,6 +129,7 @@ void arch_init_bsp() {
 
     ipi_init_bsp();
     init_cpu_locals(mp_request.response->cpu_count);
+    fpu_init_bsp();
 
     uint32_t current_core_id = 1;
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
@@ -132,9 +138,25 @@ void arch_init_bsp() {
         mp_request.response->cpus[i]->extra_argument = current_core_id++;
     }
 
-    init_aps();
-
+    userspace_init();
+    // init_aps();
     sched_init_bsp();
+
+    for(size_t i = 0; i < module_request.response->module_count; i++) {
+        if(strcmp(module_request.response->modules[i]->string, "test") == 0) {
+            vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
+            vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
+            process_t* process = process_create(allocator);
+            elf64_elf_loader_info_t* info = elf_load(process, module_request.response->modules[i]->address);
+            assert(info && "Failed to load test module");
+            thread_t* thread = sched_arch_create_thread_user(process, info->entry_point);
+            process_add_thread(process, thread);
+            sched_thread_schedule(thread);
+            break;
+        }
+    }
+
+
     sched_arch_handoff();
 
     while(1) { arch_wait_for_interrupt(); }
@@ -152,6 +174,8 @@ void arch_init_ap(struct limine_mp_info* info) {
     interrupts_setup_ap();
     lapic_init_ap();
     ipi_init_ap();
+    fpu_init_ap();
+    userspace_init();
 
     atomic_store(&arch_ap_finished, 1);
     printf("core %u started\n", info->extra_argument);

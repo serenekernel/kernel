@@ -18,7 +18,7 @@ void ipi_handler(interrupt_frame_t* frame) {
 
     ipi_t* ipi = &g_ipi_structs[arch_get_core_id()];
     assert(ipi->in_use && "IPI not in use");
-    nl_printf("ipi\n");
+    nl_printf("handling ipi %u for core %u\n", ipi->type, arch_get_core_id());
     if(ipi->type == IPI_TYPE_TLB_FLUSH) { vm_flush_page_raw(ipi->data.tlb_flush.addr); }
     if(ipi->type == IPI_TYPE_DIE) { arch_die(); }
 }
@@ -46,7 +46,7 @@ void ipi_broadcast_flush_tlb(virt_addr_t addr) {
 
         ipi->type = IPI_TYPE_TLB_FLUSH;
         ipi->data.tlb_flush.addr = addr;
-
+        arch_memory_barrier();
         lapic_send_ipi(cpu_local_get_core_lapic_id(i), g_ipi_vector);
     }
 }
@@ -61,7 +61,7 @@ void ipi_broadcast_die() {
         while(atomic_exchange_explicit(&ipi->in_use, 1, memory_order_acquire)) { arch_pause(); }
 
         ipi->type = IPI_TYPE_DIE;
-
+        arch_memory_barrier();
         lapic_send_ipi(cpu_local_get_core_lapic_id(i), g_ipi_vector);
     }
 }

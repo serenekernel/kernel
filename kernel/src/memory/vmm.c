@@ -161,7 +161,6 @@ virt_addr_t vmm_alloc_bytes(vm_allocator_t* allocator, size_t object_size) {
 
 virt_addr_t vmm_alloc_aligned_bytes(vm_allocator_t* allocator, size_t object_size, size_t alignment) {
     assert(IS_POWER_OF_TWO(alignment));
-    assert(alignment >= PAGE_SIZE_DEFAULT);
 
     // Over-allocate by one extra `alignment` worth so we're guaranteed
     // to find an aligned start regardless of where the VMM places the base.
