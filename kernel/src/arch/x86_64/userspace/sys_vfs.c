@@ -18,7 +18,7 @@ syscall_ret_t syscall_sys_write(uint64_t fd, virt_addr_t buf, size_t count) {
         bool __prev = arch_disable_uap();
         printf("%.*s", (int) count, (const char*) buf);
         arch_restore_uap(__prev);
-        return SYSCALL_RET_VALUE(0);
+        return SYSCALL_RET_VALUE(count);
     }
 
     printf("syscall_sys_write: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);

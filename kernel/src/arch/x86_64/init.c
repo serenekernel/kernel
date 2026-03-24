@@ -28,6 +28,8 @@
 #include <string.h>
 #include <uacpi/uacpi.h>
 
+#include "common/ldr/sysv.h"
+
 void setup_protections() {
     arch_memory_barrier();
     uint64_t cr4 = __read_cr4();
@@ -147,9 +149,12 @@ void arch_init_bsp() {
             vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
             vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
             process_t* process = process_create(allocator);
-            elf64_elf_loader_info_t* info = elf_load(process, module_request.response->modules[i]->address);
-            assert(info && "Failed to load test module");
-            thread_t* thread = sched_arch_create_thread_user(process, info->entry_point);
+            elf64_elf_loader_info_t* loader_info = elf_load(process, module_request.response->modules[i]->address);
+            assert(loader_info && "Failed to load test module");
+            virt_addr_t user_stack_top = vmm_alloc_backed(process->allocator, 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+            user_stack_top = sysv_user_stack_init(process, user_stack_top, loader_info);
+            thread_t* thread = sched_arch_create_thread_user(process, user_stack_top, loader_info->entry_point);
+
             process_add_thread(process, thread);
             sched_thread_schedule(thread);
             break;

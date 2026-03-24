@@ -18,6 +18,10 @@ bool elf_supported(const elf64_elf_header_t* elf_header) {
 void load_elf_exec(process_t* process, const elf64_elf_header_t* elf_header, elf64_elf_loader_info_t* loader_info) {
     elf64_program_header_t* phdrs = (elf64_program_header_t*) ((uintptr_t) elf_header + elf_header->e_phoff);
 
+    loader_info->entry_point = elf_header->e_entry;
+    // loader_info->phdr_table = (virt_addr_t) phdrs;
+    loader_info->phnum = elf_header->e_phnum;
+    loader_info->phentsize = elf_header->e_phentsize;
     vm_address_space_switch(process->allocator);
 
     uintptr_t base_address = 0;
@@ -85,7 +89,6 @@ void load_elf_exec(process_t* process, const elf64_elf_header_t* elf_header, elf
     }
 
     vm_address_space_switch(&kernel_allocator);
-    loader_info->entry_point = elf_header->e_entry;
 }
 
 elf64_elf_loader_info_t* elf_load(process_t* process, const elf64_elf_header_t* elf_header) {

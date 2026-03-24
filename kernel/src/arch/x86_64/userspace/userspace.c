@@ -1,7 +1,6 @@
 #include <common/userspace/userspace.h>
-
-#include "memory/memory.h"
-#include "memory/vmm.h"
+#include <memory/memory.h>
+#include <memory/vmm.h>
 
 bool validate_user_buffer(process_t* proc, virt_addr_t addr, size_t size) {
     if(addr < proc->allocator->start || addr + size > proc->allocator->end) { return false; }

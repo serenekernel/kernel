@@ -3,6 +3,8 @@
 #include <arch/sched/thread.h>
 #include <assert.h>
 #include <common/sched/process.h>
+#include <common/userspace/sys_debug.h>
+#include <common/userspace/sys_mem.h>
 #include <common/userspace/sys_proc.h>
 #include <common/userspace/sys_vfs.h>
 #include <common/userspace/userspace.h>
@@ -38,9 +40,13 @@ syscall_entry_t syscall_table[MAX_SYSCALL_NUMBER];
 
 const char* convert_syscall_number(syscall_nr_t nr) {
     switch(nr) {
-        case SYS_EXIT:  return "SYS_EXIT";
-        case SYS_WRITE: return "SYS_WRITE";
-        default:        return "UNKNOWN_SYSCALL";
+        case SYS_EXIT:           return "SYS_EXIT";
+        case SYS_WRITE:          return "SYS_WRITE";
+        case SYS_DEBUG_LOG:      return "SYS_DEBUG_LOG";
+        case SYS_TCB_SET:        return "SYS_TCB_SET";
+        case SYS_MEM_ANON_ALLOC: return "SYS_MEM_ANON_ALLOC";
+        case SYS_MEM_ANON_FREE:  return "SYS_MEM_ANON_FREE";
+        default:                 return "UNKNOWN_SYSCALL";
     }
 }
 
@@ -50,6 +56,7 @@ const char* convert_syscall_ret(syscall_ret_t ret) {
         case SYSCALL_ERR_INVALID_ADDRESS:  return "SYSCALL_ERR_INVALID_ADDRESS";
         case SYSCALL_ERR_INVALID_ARGUMENT: return "SYSCALL_ERR_INVALID_ARGUMENT";
         case SYSCALL_ERR_INVALID_SYSCALL:  return "SYSCALL_ERR_INVALID_SYSCALL";
+        case SYSCALL_ERR_OUT_OF_MEMORY:    return "SYSCALL_ERR_OUT_OF_MEMORY";
         default:                           return "UNKNOWN_SYSCALL_ERROR";
     }
 }
@@ -156,4 +163,8 @@ void userspace_init() {
 
     SYSCALL_DISPATCHER(SYS_EXIT, syscall_sys_exit, 1);
     SYSCALL_DISPATCHER(SYS_WRITE, syscall_sys_write, 3);
+    SYSCALL_DISPATCHER(SYS_DEBUG_LOG, syscall_sys_debug_log, 2);
+    SYSCALL_DISPATCHER(SYS_TCB_SET, syscall_sys_tcb_set, 1);
+    SYSCALL_DISPATCHER(SYS_MEM_ANON_ALLOC, syscall_sys_mem_anon_alloc, 2);
+    SYSCALL_DISPATCHER(SYS_MEM_ANON_FREE, syscall_sys_mem_anon_free, 1);
 }

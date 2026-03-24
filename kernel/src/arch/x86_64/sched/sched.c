@@ -84,9 +84,8 @@ thread_t* sched_arch_create_thread_kernel(virt_addr_t entry) {
     return &sched_arch_create_thread_common(g_next_thread_id++, nullptr, &CPU_LOCAL_READ(self)->sched, kernel_stack_top, (uintptr_t) init_stack)->common;
 }
 
-thread_t* sched_arch_create_thread_user(process_t* process, virt_addr_t entry) {
+thread_t* sched_arch_create_thread_user(process_t* process, virt_addr_t user_stack_top, virt_addr_t entry) {
     virt_addr_t kernel_stack_top = vmm_alloc_backed(&kernel_allocator, 16, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
-    virt_addr_t user_stack_top = vmm_alloc_backed(process->allocator, 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
 
     init_stack_user_t* init_stack = (init_stack_user_t*) (kernel_stack_top - sizeof(init_stack_user_t));
     init_stack->entry = entry;
@@ -116,6 +115,9 @@ void sched_arch_switch(thread_t* t_current, thread_t* t_next) {
     } else if(next->common.process) {
         vm_address_space_switch(next->common.process->allocator);
     }
+
+    current->gsbase = read_msr(IA32_KERNEL_GS_BASE_MSR);
+    current->fsbase = read_msr(IA32_FS_BASE_MSR);
 
     write_msr(IA32_KERNEL_GS_BASE_MSR, next->gsbase);
     write_msr(IA32_FS_BASE_MSR, next->fsbase);

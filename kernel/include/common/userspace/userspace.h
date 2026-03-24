@@ -4,14 +4,18 @@
 
 typedef enum : uint64_t {
     SYS_EXIT = 0,
-
     SYS_WRITE = 1,
+    SYS_DEBUG_LOG = 2,
+    SYS_TCB_SET = 3,
+    SYS_MEM_ANON_ALLOC = 4,
+    SYS_MEM_ANON_FREE = 5,
 } syscall_nr_t;
 
 typedef enum : int64_t {
     SYSCALL_ERR_INVALID_ARGUMENT = -1,
     SYSCALL_ERR_INVALID_ADDRESS = -2,
     SYSCALL_ERR_INVALID_SYSCALL = -3,
+    SYSCALL_ERR_OUT_OF_MEMORY = -4,
 } syscall_err_t;
 
 typedef struct {
