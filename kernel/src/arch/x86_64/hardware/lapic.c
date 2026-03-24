@@ -4,6 +4,7 @@
 #include <arch/msr.h>
 #include <assert.h>
 #include <common/io.h>
+#include <common/irql.h>
 #include <common/requests.h>
 #include <memory/memory.h>
 #include <memory/vmm.h>
@@ -228,8 +229,9 @@ void lapic_send_icr(uint32_t apic_id, uint64_t icr) {
     if(x2apic_mode) {
         lapic_write64(LAPIC_X2APIC_ICR, icr);
     } else {
+        irql_t irql = irql_raise(IRQL_HIGH);
         lapic_write64(LAPIC_ICR_LOW, icr);
-
+        irql_lower(irql);
         while(lapic_read(LAPIC_ICR_LOW) & (1 << 12)) { __builtin_ia32_pause(); }
     }
 }
