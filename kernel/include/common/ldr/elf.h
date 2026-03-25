@@ -6,7 +6,6 @@
 
 typedef struct {
     virt_addr_t entry_point;
-    virt_addr_t exe_entry;
     virt_addr_t phdr_table;
     size_t phnum;
     size_t phentsize;
