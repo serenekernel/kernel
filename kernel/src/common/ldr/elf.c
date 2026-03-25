@@ -3,6 +3,7 @@
 #include <memory/heap.h>
 #include <memory/vmm.h>
 #include <stddef.h>
+#include <string.h>
 
 bool elf_supported(const elf64_elf_header_t* elf_header) {
     if(!elf_header) { return false; }
@@ -82,6 +83,5 @@ elf64_elf_loader_info_t* elf_load(process_t* process, const elf64_elf_header_t* 
 
     assert(elf_header->e_type == ETYPE_EXEC);
     load_elf_exec(process, elf_header, loader_info);
-
     return loader_info;
 }

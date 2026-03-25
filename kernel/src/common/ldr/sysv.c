@@ -23,9 +23,6 @@ typedef enum : uint64_t {
     AUXV_SECURE = 23
 } auxv_entry_t;
 
-virt_addr_t stackpush_8(virt_addr_t stack_top, uint64_t value) {
-    *(virt_addr_t*) stack_top = value;
-    stack_top -= sizeof(uint64_t);
 
 static virt_addr_t stackpush_8(virt_addr_t stack_top, uint64_t value) {
     stack_top -= sizeof(uint64_t);
@@ -42,23 +39,6 @@ static virt_addr_t stackpush_auxv(virt_addr_t stack_top, auxv_entry_t type, uint
 }
 
 #define LOCAL_STACK_SIZE 512
-
-size_t write_stack_data(virt_addr_t local_stack_top, elf64_elf_loader_info_t* loader_info) {
-    virt_addr_t stack = (virt_addr_t) local_stack_top;
-    stack = stackpush_8(stack, AUXV_NULL);
-    stack = stackpush_auxv(stack, AUXV_PHNUM, loader_info->phnum);
-    stack = stackpush_auxv(stack, AUXV_PHDR, loader_info->phdr_table);
-    stack = stackpush_auxv(stack, AUXV_PHENT, loader_info->phentsize);
-    stack = stackpush_auxv(stack, AUXV_ENTRY, loader_info->entry_point);
-    stack = stackpush_auxv(stack, AUXV_SECURE, 0);
-    stack = stackpush_auxv(stack, AUXV_PAGESZ, PAGE_SIZE_DEFAULT);
-
-    stack = stackpush_8(stack, 0); // envp null term
-    stack = stackpush_8(stack, 0); // argv null term
-    stack = stackpush_8(stack, 0); // argc
-
-    return local_stack_top - stack;
-}
 
 virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top, elf64_elf_loader_info_t* loader_info) {
     uint8_t* buf = (uint8_t*) heap_alloc(LOCAL_STACK_SIZE);
