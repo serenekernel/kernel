@@ -223,13 +223,13 @@ vfs_result_t rdsk_node_read(vfs_node_t* node, void* buffer, size_t size, size_t 
     if(node->type != VFS_NODE_TYPE_FILE) return VFS_RESULT_ERR_NOT_FILE;
 
     if(offset >= FILE(node)->size) {
-        *read_count = 0;
+        if(read_count) *read_count = 0;
         return VFS_RESULT_OK;
     }
     size_t count = FILE(node)->size - offset;
     if(count > size) count = size;
     memcpy(buffer, (void*) (((uintptr_t) INFO(node->vfs)->header + FILE(node)->data_offset) + offset), count);
-    *read_count = count;
+    if(read_count) *read_count = count;
     return VFS_RESULT_OK;
 }
 
