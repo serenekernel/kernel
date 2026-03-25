@@ -19,7 +19,6 @@ void load_elf_exec(process_t* process, const elf64_elf_header_t* elf_header, elf
     elf64_program_header_t* phdrs = (elf64_program_header_t*) ((uintptr_t) elf_header + elf_header->e_phoff);
 
     loader_info->entry_point = elf_header->e_entry;
-    // loader_info->phdr_table = (virt_addr_t) phdrs;
     loader_info->phnum = elf_header->e_phnum;
     loader_info->phentsize = elf_header->e_phentsize;
     vm_address_space_switch(process->allocator);
@@ -49,6 +48,7 @@ void load_elf_exec(process_t* process, const elf64_elf_header_t* elf_header, elf
 
     for(uint16_t i = 0; i < elf_header->e_phnum; i++) {
         elf64_program_header_t* phdr = &phdrs[i];
+        if(phdr->p_type == PTYPE_PHDR) { loader_info->phdr_table = (virt_addr_t) phdr->p_vaddr + base_address; }
         if(phdr->p_type != PTYPE_LOAD) { continue; }
 
         virt_addr_t segment_vaddr = phdr->p_vaddr + base_address;

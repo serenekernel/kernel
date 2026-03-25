@@ -9,6 +9,8 @@
 #include <common/arch.h>
 #include <common/cpu_local.h>
 #include <common/dpc.h>
+#include <common/fs/rdsk.h>
+#include <common/fs/vfs.h>
 #include <common/interrupts.h>
 #include <common/io.h>
 #include <common/ipi.h>
@@ -143,6 +145,48 @@ void arch_init_bsp() {
     userspace_init();
     // init_aps();
     sched_init_bsp();
+
+    struct limine_file* initramfs_file = nullptr;
+    for(size_t i = 0; i < module_request.response->module_count; i++) {
+        if(strcmp(module_request.response->modules[i]->string, "initramfs-module") == 0) {
+            initramfs_file = module_request.response->modules[i];
+            break;
+        }
+    }
+
+    assert(initramfs_file != nullptr && "initramfs.rdk not found");
+
+    vfs_result_t res = vfs_mount(&fs_rdsk_ops, nullptr, (void*) initramfs_file->address);
+    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs", res);
+
+    printf("mounted initramfs\n");
+
+    vfs_node_t* root_node;
+    res = vfs_root(&root_node);
+    assertf(res == VFS_RESULT_OK, "Failed to get root node", res);
+
+    size_t offset = 0;
+    while(1) {
+        vfs_node_t* dirent;
+        res = root_node->ops->readdir(root_node, &offset, &dirent);
+        if(res == VFS_RESULT_ERR_NOT_FOUND) { break; }
+        assertf(res == VFS_RESULT_OK, "Failed to readdir", res);
+        if(dirent == nullptr) {
+            // printf("dirent is null\n");
+            break;
+        }
+
+        size_t name_size;
+        res = dirent->ops->name(dirent, nullptr, 0, &name_size);
+        assertf(res == VFS_RESULT_ERR_BUFFER_TOO_SMALL, "Failed to get dirent name size", res);
+        char* name = heap_alloc(name_size);
+        res = dirent->ops->name(dirent, name, name_size, nullptr);
+        assertf(res == VFS_RESULT_OK, "Failed to get dirent name", res);
+        vfs_node_attr_t attr;
+        res = dirent->ops->attr(dirent, &attr);
+        assertf(res == VFS_RESULT_OK, "Failed to get dirent attr", res);
+        printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", name, attr.size);
+    }
 
     for(size_t i = 0; i < module_request.response->module_count; i++) {
         if(strcmp(module_request.response->modules[i]->string, "test") == 0) {

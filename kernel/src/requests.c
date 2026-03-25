@@ -25,7 +25,7 @@ LIMINE_REQUEST volatile struct limine_rsdp_request rsdp_request = {
 };
 
 LIMINE_REQUEST volatile struct limine_internal_module initramfs = {
-    .path = "initramfs.tar",
+    .path = "initramfs.rdk",
     .string = "initramfs-module",
     .flags = LIMINE_INTERNAL_MODULE_REQUIRED,
 };
