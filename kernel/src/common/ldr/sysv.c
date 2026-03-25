@@ -48,7 +48,6 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
 
     virt_addr_t tbl = str_top;
 
-    tbl = stackpush_8(tbl, 0);
     tbl = stackpush_8(tbl, AUXV_NULL);
 
     tbl = stackpush_auxv(tbl, AUXV_PAGESZ, PAGE_SIZE_DEFAULT);
@@ -58,14 +57,10 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
     tbl = stackpush_auxv(tbl, AUXV_PHDR, loader_info->phdr_table);
     tbl = stackpush_auxv(tbl, AUXV_PHNUM, loader_info->phnum);
 
+    tbl = stackpush_8(tbl, 0); // envp end
+    tbl = stackpush_8(tbl, 0); // argv end
 
-    tbl = stackpush_8(tbl, 0);
-    tbl = stackpush_8(tbl, 0);
-
-
-    tbl = stackpush_8(tbl, 0);
-    tbl = stackpush_8(tbl, 0);
-
+    tbl = stackpush_8(tbl, 0); // argc
 
     size_t data_size = buf_top - tbl;
     virt_addr_t stack_pointer = ALIGN_DOWN(user_stack_top - data_size, 16);
