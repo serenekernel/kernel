@@ -60,7 +60,7 @@ vfs_result_t vfs_lookup(vfs_path_t* path, vfs_node_t** result_node) {
     if(path->rel_path[comp_end] == '/' || current_node == nullptr) {
         vfs_result_t res = vfs_root(&current_node);
         if(res != VFS_RESULT_OK) return res;
-        comp_start++, comp_end++;
+        if(path->rel_path[comp_end] == '/') { comp_start++, comp_end++; }
     }
     if(current_node == nullptr) return VFS_RESULT_ERR_NOT_FOUND;
 

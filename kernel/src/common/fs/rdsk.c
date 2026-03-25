@@ -116,7 +116,7 @@ static rdsk_dir_t* find_dir(vfs_t* vfs, rdsk_dir_t* dir, char* name) {
     while(curindex != 0) {
         rdsk_dir_t* curdir = get_dir(vfs, curindex);
         curindex = curdir->next_index;
-        if(!strcmp(name, get_name(vfs, curdir->nametable_offset))) continue;
+        if(strcmp(name, get_name(vfs, curdir->nametable_offset))) continue;
         return curdir;
     }
     return nullptr;
@@ -127,7 +127,7 @@ static rdsk_file_t* find_file(vfs_t* vfs, rdsk_dir_t* dir, char* name) {
     while(curindex != 0) {
         rdsk_file_t* curfile = get_file(vfs, curindex);
         curindex = curfile->next_index;
-        if(!strcmp(name, get_name(vfs, curfile->nametable_offset))) continue;
+        if(strcmp(name, get_name(vfs, curfile->nametable_offset))) continue;
         return curfile;
     }
     return nullptr;
