@@ -66,6 +66,7 @@ vfs_result_t vfs_lookup(vfs_path_t* path, vfs_node_t** result_node) {
 
     do {
         switch(path->rel_path[comp_end]) {
+            case '\0': [[fallthrough]];
             case '/':
                 if(comp_start == comp_end) {
                     comp_start++;
