@@ -30,16 +30,9 @@ LIMINE_REQUEST volatile struct limine_internal_module initramfs = {
     .flags = LIMINE_INTERNAL_MODULE_REQUIRED,
 };
 
-LIMINE_REQUEST volatile struct limine_internal_module test = {
-    .path = "test.elf",
-    .string = "test",
-    .flags = LIMINE_INTERNAL_MODULE_REQUIRED,
-};
+LIMINE_REQUEST volatile struct limine_internal_module* modules[] = { &initramfs };
 
-
-LIMINE_REQUEST volatile struct limine_internal_module* modules[] = { &initramfs, &test };
-
-LIMINE_REQUEST volatile struct limine_module_request module_request = { .id = LIMINE_MODULE_REQUEST_ID, .revision = 1, .internal_modules = (struct limine_internal_module**) &modules, .internal_module_count = 2 };
+LIMINE_REQUEST volatile struct limine_module_request module_request = { .id = LIMINE_MODULE_REQUEST_ID, .revision = 1, .internal_modules = (struct limine_internal_module**) &modules, .internal_module_count = 1 };
 
 LIMINE_REQUEST volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(4);
 __attribute__((used, section(".limine_requests_start"))) volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
