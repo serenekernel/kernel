@@ -16,6 +16,8 @@
 #include <common/ipi.h>
 #include <common/irql.h>
 #include <common/ldr/elf.h>
+#include <common/ldr/elf_internal.h>
+#include <common/ldr/sysv.h>
 #include <common/requests.h>
 #include <common/sched/process.h>
 #include <common/sched/sched.h>
@@ -29,8 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <uacpi/uacpi.h>
-
-#include "common/ldr/sysv.h"
 
 void setup_protections() {
     arch_memory_barrier();
@@ -157,20 +157,20 @@ void arch_init_bsp() {
     assert(initramfs_file != nullptr && "initramfs.rdk not found");
 
     vfs_result_t res = vfs_mount(&fs_rdsk_ops, nullptr, (void*) initramfs_file->address);
-    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs", res);
+    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs  %d", res);
 
     printf("mounted initramfs\n");
 
     vfs_node_t* root_node;
     res = vfs_root(&root_node);
-    assertf(res == VFS_RESULT_OK, "Failed to get root node", res);
+    assertf(res == VFS_RESULT_OK, "Failed to get root node %d", res);
 
     size_t offset = 0;
     while(1) {
         vfs_node_t* dirent;
         res = root_node->ops->readdir(root_node, &offset, &dirent);
         if(res == VFS_RESULT_ERR_NOT_FOUND) { break; }
-        assertf(res == VFS_RESULT_OK, "Failed to readdir", res);
+        assertf(res == VFS_RESULT_OK, "Failed to readdir %d", res);
         if(dirent == nullptr) {
             // printf("dirent is null\n");
             break;
@@ -178,32 +178,41 @@ void arch_init_bsp() {
 
         size_t name_size;
         res = dirent->ops->name(dirent, nullptr, 0, &name_size);
-        assertf(res == VFS_RESULT_ERR_BUFFER_TOO_SMALL, "Failed to get dirent name size", res);
+        assertf(res == VFS_RESULT_ERR_BUFFER_TOO_SMALL, "Failed to get dirent name size %d", res);
         char* name = heap_alloc(name_size);
         res = dirent->ops->name(dirent, name, name_size, nullptr);
-        assertf(res == VFS_RESULT_OK, "Failed to get dirent name", res);
+        assertf(res == VFS_RESULT_OK, "Failed to get dirent name %d", res);
         vfs_node_attr_t attr;
         res = dirent->ops->attr(dirent, &attr);
-        assertf(res == VFS_RESULT_OK, "Failed to get dirent attr", res);
+        assertf(res == VFS_RESULT_OK, "Failed to get dirent attr %d", res);
         printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", name, attr.size);
     }
 
-    for(size_t i = 0; i < module_request.response->module_count; i++) {
-        if(strcmp(module_request.response->modules[i]->string, "test") == 0) {
-            vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
-            vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
-            process_t* process = process_create(allocator);
-            elf64_elf_loader_info_t* loader_info = elf_load(process, module_request.response->modules[i]->address);
-            assert(loader_info && "Failed to load test module");
-            virt_addr_t user_stack_top = vmm_alloc_backed(process->allocator, 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
-            user_stack_top = sysv_user_stack_init(process, user_stack_top, loader_info);
-            thread_t* thread = sched_arch_create_thread_user(process, user_stack_top, loader_info->entry_point);
 
-            process_add_thread(process, thread);
-            sched_thread_schedule(thread);
-            break;
-        }
-    }
+    vfs_node_t* vfs_node;
+    res = vfs_lookup(&VFS_MAKE_ABS_PATH("hello.elf"), &vfs_node);
+    assertf(res == VFS_RESULT_OK, "Failed to lookup hello.elf %d", res);
+
+    vfs_node_attr_t attr;
+    res = vfs_node->ops->attr(vfs_node, &attr);
+    assertf(res == VFS_RESULT_OK, "Failed to get file attr %d", res);
+
+    uint8_t* elf_file = heap_alloc(attr.size);
+    res = vfs_node->ops->read(vfs_node, elf_file, attr.size, 0, nullptr);
+    assertf(res == VFS_RESULT_OK, "Failed to read hello.elf %d", res);
+
+    // @todo: this is horrifc
+    vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
+    vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
+    process_t* process = process_create(allocator);
+    elf64_elf_loader_info_t* loader_info = elf_load(process, (const elf64_elf_header_t*) elf_file);
+    assert(loader_info && "Failed to load test module");
+    virt_addr_t user_stack_top = vmm_alloc_backed(process->allocator, 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+    user_stack_top = sysv_user_stack_init(process, user_stack_top, loader_info);
+    thread_t* thread = sched_arch_create_thread_user(process, user_stack_top, loader_info->entry_point);
+
+    process_add_thread(process, thread);
+    sched_thread_schedule(thread);
 
 
     sched_arch_handoff();
