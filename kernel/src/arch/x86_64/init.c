@@ -207,13 +207,12 @@ void arch_init_bsp() {
     process_t* process = process_create(allocator);
     elf64_elf_loader_info_t* loader_info = elf_load(process, (const elf64_elf_header_t*) elf_file);
     assert(loader_info && "Failed to load test module");
-    virt_addr_t user_stack_top = vmm_alloc_backed(process->allocator, 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+    virt_addr_t user_stack_top = vmm_try_alloc_backed(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
     user_stack_top = sysv_user_stack_init(process, user_stack_top, loader_info);
     thread_t* thread = sched_arch_create_thread_user(process, user_stack_top, loader_info->entry_point);
 
     process_add_thread(process, thread);
     sched_thread_schedule(thread);
-
 
     sched_arch_handoff();
 
