@@ -47,8 +47,3 @@ typedef struct {
 
 #define PFLAGS_EXECUTE (1 << 0)
 #define PFLAGS_WRITE (1 << 1)
-
-typedef enum {
-    KCREATE_PROC_NONE = 0,
-    KCREATE_PROC_SUSPEND = 1
-} kcreate_proc_flags;
