@@ -1,4 +1,4 @@
 #include <common/userspace/userspace.h>
 
-syscall_ret_t syscall_sys_mem_anon_alloc(uint64_t size, uint64_t align);
-syscall_ret_t syscall_sys_mem_anon_free(uint64_t addr);
+syscall_ret_t syscall_sys_vm_map(virt_addr_t hint, size_t size, size_t prot, size_t flags, size_t fd, size_t offset);
+syscall_ret_t syscall_sys_vm_unmap(uint64_t addr, size_t size);

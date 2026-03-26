@@ -10,7 +10,7 @@
 
 syscall_ret_t syscall_sys_debug_log(virt_addr_t buf, size_t count) {
     if(count == 0) { return SYSCALL_RET_VALUE(0); }
-    if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(SYSCALL_ERR_INVALID_ADDRESS); }
+    if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
     bool __prev = arch_disable_uap();
     printf("%.*s\n", (int) count, (const char*) buf);

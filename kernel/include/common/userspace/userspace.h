@@ -4,18 +4,25 @@
 
 typedef enum : uint64_t {
     SYS_EXIT = 0,
-    SYS_WRITE = 1,
-    SYS_DEBUG_LOG = 2,
-    SYS_TCB_SET = 3,
-    SYS_MEM_ANON_ALLOC = 4,
-    SYS_MEM_ANON_FREE = 5,
+    SYS_OPEN = 1,
+    SYS_READ = 2,
+    SYS_WRITE = 3,
+    SYS_CLOSE = 4,
+    SYS_SEEK = 5,
+    SYS_DEBUG_LOG = 6,
+    SYS_TCB_SET = 7,
+    SYS_MEM_VM_MAP = 8,
+    SYS_MEM_VM_UNMAP = 9,
 } syscall_nr_t;
 
 typedef enum : int64_t {
-    SYSCALL_ERR_INVALID_ARGUMENT = -1,
-    SYSCALL_ERR_INVALID_ADDRESS = -2,
-    SYSCALL_ERR_INVALID_SYSCALL = -3,
-    SYSCALL_ERR_OUT_OF_MEMORY = -4,
+    ERROR_NOENT = 2, // No such file or directory
+    ERROR_FAULT = 14, // Bad address
+    ERROR_NOMEM = 12, // Out of memory
+    ERROR_INVAL = 22, // Invalid argument
+    ERROR_ROFS = 30, // Read-only file system
+    ERROR_BADFD = 81, // Bad file descriptor
+    ERROR_ENOSYS = 88 // Function not implemented
 } syscall_err_t;
 
 typedef struct {
@@ -37,12 +44,12 @@ void userspace_init();
 const char* convert_syscall_number(syscall_nr_t nr);
 const char* convert_syscall_error(syscall_err_t err);
 
-#define SYSCALL_ASSERT_PARAM(cond)                                  \
-    do {                                                            \
-        if(!(cond)) {                                               \
-            printf("syscall assertion failed: %s\n", #cond);        \
-            return SYSCALL_RET_ERROR(SYSCALL_ERR_INVALID_ARGUMENT); \
-        }                                                           \
+#define SYSCALL_ASSERT_PARAM(cond)                           \
+    do {                                                     \
+        if(!(cond)) {                                        \
+            printf("syscall assertion failed: %s\n", #cond); \
+            return SYSCALL_RET_ERROR(ERROR_INVAL);           \
+        }                                                    \
     } while(0)
 
 
