@@ -25,6 +25,7 @@ typedef enum {
 
 typedef struct {
     size_t size;
+    vfs_node_type_t type;
 } vfs_node_attr_t;
 
 struct vfs_ops {
@@ -43,6 +44,7 @@ struct vfs_node_ops {
     // @param: size - the size of the buffer
     // @param: offset - the offset to read from
     // @param: read_count - set to the number of bytes read
+    // @note: if buffer is null or size is 0, read_count is set to the size of the file and the return value is VFS_RESULT_OK
     vfs_result_t (*read)(vfs_node_t* node, void* buff, size_t size, size_t offset, size_t* read_count);
 
     // @param: buff - the buffer to write from
@@ -105,3 +107,4 @@ vfs_result_t vfs_lookup(vfs_path_t* path, vfs_node_t** result_node);
 
 vfs_result_t vfs_read(vfs_path_t* path, void* buff, size_t size, size_t offset, size_t* read_count);
 vfs_result_t vfs_write(vfs_path_t* path, const void* buff, size_t size, size_t offset, size_t* written_count);
+vfs_result_t vfs_attr(vfs_path_t* path, vfs_node_attr_t* attr);

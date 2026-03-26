@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "common/fs/vfs.h"
+#include "common/ldr/elf_internal.h"
+#include "memory/memory.h"
+
 bool elf_supported(const elf64_elf_header_t* elf_header) {
     if(!elf_header) { return false; }
     if(elf_header->e_ident[0] != 0x7f || elf_header->e_ident[1] != 'E' || elf_header->e_ident[2] != 'L' || elf_header->e_ident[3] != 'F') { return false; }
@@ -15,73 +19,155 @@ bool elf_supported(const elf64_elf_header_t* elf_header) {
     return true;
 }
 
-uintptr_t load_elf_exec(process_t* process, const elf64_elf_header_t* elf_header, elf64_elf_loader_info_t* loader_info) {
-    elf64_program_header_t* phdrs = (elf64_program_header_t*) ((uintptr_t) elf_header + elf_header->e_phoff);
+typedef struct {
+    uintptr_t image_start_address;
+    uintptr_t image_end_address;
+    uintptr_t image_offset;
+} elf_image_allocation;
 
-    loader_info->entry_point = elf_header->e_entry;
-    loader_info->phnum = elf_header->e_phnum;
-    loader_info->phentsize = elf_header->e_phentsize;
-    vm_address_space_switch(process->allocator);
+bool __allocate_for_image(process_t* process, const elf64_elf_header_t* elf_header, const elf64_program_header_t* phdrs, elf_image_allocation* allocation) {
+    uintptr_t image_start_address = 0;
+    uintptr_t image_end_address = 0;
+    uintptr_t image_offset = 0;
 
-    uintptr_t base_address = 0;
-
-    assert(elf_header->e_phnum != 0xffff && "the number of program headers is too large to fit into e_phnum");
-
-    virt_addr_t min_addr = (virt_addr_t) -1;
-    virt_addr_t max_addr = 0;
-
-    for(uint16_t i = 0; i < elf_header->e_phnum; i++) {
-        elf64_program_header_t* phdr = &phdrs[i];
-        if(phdr->p_type != PTYPE_LOAD) { continue; }
-        virt_addr_t seg_start = ALIGN_DOWN(phdr->p_vaddr + base_address, PAGE_SIZE_DEFAULT);
-        virt_addr_t seg_end = ALIGN_UP(phdr->p_vaddr + base_address + phdr->p_memsz, PAGE_SIZE_DEFAULT);
-
-        if(seg_start < min_addr) { min_addr = seg_start; }
-        if(seg_end > max_addr) { max_addr = seg_end; }
+    for(size_t i = 0; i < elf_header->e_phnum; i++) {
+        if(phdrs[i].p_type == PTYPE_LOAD) {
+            if(image_start_address == 0 || phdrs[i].p_vaddr < image_start_address) { image_start_address = phdrs[i].p_vaddr; }
+            if(image_end_address == 0 || phdrs[i].p_vaddr + phdrs[i].p_memsz > image_end_address) { image_end_address = phdrs[i].p_vaddr + phdrs[i].p_memsz; }
+        }
     }
 
-    size_t total_page_count = (max_addr - min_addr) / PAGE_SIZE_DEFAULT;
-    printf("load: 0x%llx, entry: 0x%llx, %d pages\n", min_addr, elf_header->e_entry, total_page_count);
+    if(elf_header->e_type == ETYPE_DYN) { image_start_address = 0; }
 
-    virt_addr_t allocation = vmm_try_alloc_backed(process->allocator, min_addr, total_page_count, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true);
-    assert(allocation != 0 && "failed to allocate segment for elf loading");
+    printf("lowest_address = 0x%lx, highest_address = 0x%lx\n", image_start_address, image_end_address);
 
-    for(uint16_t i = 0; i < elf_header->e_phnum; i++) {
-        elf64_program_header_t* phdr = &phdrs[i];
+    uintptr_t target_allocation = image_start_address + image_offset;
+    size_t image_size = ALIGN_UP((image_end_address - image_start_address), PAGE_SIZE_DEFAULT);
+    printf("target_allocation = 0x%lx, image_size = 0x%lx\n", target_allocation, image_size);
 
-        if(phdr->p_type == PTYPE_PHDR) { loader_info->phdr_table = (virt_addr_t) phdr->p_vaddr + base_address; }
-        if(phdr->p_type != PTYPE_LOAD) { continue; }
-
-        virt_addr_t segment_vaddr = phdr->p_vaddr + base_address;
-        virt_addr_t segment_start = ALIGN_DOWN(segment_vaddr, PAGE_SIZE_DEFAULT);
-        virt_addr_t segment_end = ALIGN_UP(segment_vaddr + phdr->p_memsz, PAGE_SIZE_DEFAULT);
-        size_t segment_pages = (segment_end - segment_start) / PAGE_SIZE_DEFAULT;
-
-        vm_memcpy(process->allocator, &kernel_allocator, segment_vaddr, (virt_addr_t) elf_header + phdr->p_offset, phdr->p_filesz);
-
-        if(phdr->p_memsz > phdr->p_filesz) { vm_memset(process->allocator, segment_vaddr + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz); }
-
-        vm_flags_t flags = VM_READ_ONLY;
-        if(phdr->p_flags & PFLAGS_WRITE) { flags |= VM_READ_WRITE; }
-        if(phdr->p_flags & PFLAGS_EXECUTE) { flags |= VM_EXECUTE; }
-
-        printf("elf:   seg[%u] 0x%llx..0x%llx pages=%zu [%c%c%c]\n", i, segment_start, segment_end, segment_pages, 'R', (phdr->p_flags & PFLAGS_WRITE) ? 'W' : '-', (phdr->p_flags & PFLAGS_EXECUTE) ? 'X' : '-');
-
-        for(size_t j = 0; j < segment_pages; j++) { vm_reprotect_page(process->allocator, segment_start + j * PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, flags); }
+    if(elf_header->e_type == ETYPE_DYN) {
+        uintptr_t allocated = vmm_alloc_backed(process->allocator, image_size / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+        assert(allocated != 0 && "Failed to allocate memory for elf image");
+        image_offset = allocated;
+    } else {
+        assert(vmm_try_alloc_backed(process->allocator, target_allocation, image_size / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) == target_allocation && "Failed to allocate memory for elf image");
     }
+    printf("image_slide = 0x%lx, image_size = 0x%lx\n", image_offset, image_size);
 
-    vm_address_space_switch(&kernel_allocator);
-    return base_address;
+    allocation->image_start_address = image_start_address;
+    allocation->image_end_address = image_end_address;
+    allocation->image_offset = image_offset;
+    return true;
 }
 
-elf64_elf_loader_info_t* elf_load(process_t* process, const elf64_elf_header_t* elf_header) {
-    assert(elf_supported(elf_header) && "ELF file not supported");
+bool __elf_load_image(process_t* process, const elf64_elf_header_t* elf_header, vfs_path_t* path, elf64_elf_loader_info_t* loader_info) {
+    elf_image_allocation allocation = { 0 };
+
+    // read phdrs into cache
+    elf64_program_header_t* phdrs = heap_alloc(sizeof(elf64_program_header_t) * elf_header->e_phnum);
+    for(size_t i = 0; i < elf_header->e_phnum; i++) {
+        assert(vfs_read(path, &phdrs[i], sizeof(elf64_program_header_t), elf_header->e_phoff + i * elf_header->e_phentsize, nullptr) == VFS_RESULT_OK && "Failed to read program header");
+        printf("phdr[%d].p_type = 0x%lx\n", i, phdrs[i].p_type);
+        printf("phdr[%d].p_vaddr = 0x%lx, p_memsz = 0x%lx, p_filesz = 0x%lx\n", i, phdrs[i].p_vaddr, phdrs[i].p_memsz, phdrs[i].p_filesz);
+    }
+
+    // allocate memory for image
+    assert(__allocate_for_image(process, elf_header, phdrs, &allocation) && "Failed to allocate memory for elf image");
+
+    loader_info->image_offset = allocation.image_offset;
+    loader_info->executable_entry_point = allocation.image_offset + elf_header->e_entry;
+    loader_info->image_entry_point = allocation.image_offset + elf_header->e_entry;
+
+    loader_info->phnum = elf_header->e_phnum;
+    loader_info->phentsize = elf_header->e_phentsize;
+    for(size_t i = 0; i < elf_header->e_phnum; i++) {
+        if(phdrs[i].p_type == PTYPE_PHDR) {
+            loader_info->phdr_table = allocation.image_offset + phdrs[i].p_vaddr;
+            break;
+        }
+    }
+
+    if(loader_info->phdr_table == 0) { loader_info->phdr_table = allocation.image_offset + elf_header->e_phoff; }
+
+    // load PT_LOAD phdrs into memory
+    for(size_t i = 0; i < elf_header->e_phnum; i++) {
+        if(phdrs[i].p_type != PTYPE_LOAD) { continue; }
+
+        uint64_t flags = VM_READ_ONLY;
+        if(phdrs[i].p_flags & PFLAGS_WRITE) { flags |= VM_READ_WRITE; }
+        if(phdrs[i].p_flags & PFLAGS_EXECUTE) { flags |= VM_EXECUTE; }
+        for(virt_addr_t j = allocation.image_offset + phdrs[i].p_vaddr; j < allocation.image_offset + phdrs[i].p_vaddr + phdrs[i].p_memsz; j += PAGE_SIZE_DEFAULT) { vm_reprotect_page(process->allocator, j, VM_ACCESS_USER, VM_CACHE_NORMAL, flags); }
+
+        virt_addr_t phdr_data = (virt_addr_t) heap_alloc(phdrs[i].p_filesz);
+        assert(vfs_read(path, (void*) phdr_data, phdrs[i].p_filesz, phdrs[i].p_offset, nullptr) == VFS_RESULT_OK && "Failed to read program header data");
+        printf("Loading segment %zu: vaddr=0x%lx, paddr=0x%lx, size=%zu\n", i, allocation.image_offset + phdrs[i].p_vaddr, phdr_data, phdrs[i].p_filesz);
+        vm_memcpy(process->allocator, &kernel_allocator, allocation.image_offset + phdrs[i].p_vaddr, phdr_data, phdrs[i].p_filesz);
+        heap_free((void*) phdr_data, phdrs[i].p_filesz);
+    }
+
+    // load interp if any
+    // @todo: merge this pass with the previous
+    for(size_t i = 0; i < elf_header->e_phnum; i++) {
+        if(phdrs[i].p_type == PTYPE_INTERP) {
+            virt_addr_t phdr_data = (virt_addr_t) heap_alloc(phdrs[i].p_filesz);
+            assert(vfs_read(path, (void*) phdr_data, phdrs[i].p_filesz, phdrs[i].p_offset, nullptr) == VFS_RESULT_OK && "Failed to read program header data");
+            printf("interpreter: %s\n", (const char*) phdr_data);
+
+            elf64_elf_loader_info_t* interp_loader_info;
+            if(!elf_load_file(process, &VFS_MAKE_ABS_PATH((const char*) phdr_data), &interp_loader_info)) {
+                heap_free((void*) phdr_data, phdrs[i].p_filesz);
+                heap_free(phdrs, sizeof(elf64_program_header_t) * elf_header->e_phnum);
+                return false;
+            }
+
+            loader_info->executable_entry_point = interp_loader_info->executable_entry_point;
+            loader_info->interp_base = interp_loader_info->image_offset;
+            heap_free(interp_loader_info, sizeof(elf64_elf_loader_info_t));
+
+            heap_free((void*) phdr_data, phdrs[i].p_filesz);
+        }
+    }
+
+    heap_free(phdrs, sizeof(elf64_program_header_t) * elf_header->e_phnum);
+    return true;
+}
+
+bool elf_load_file(process_t* process, vfs_path_t* path, elf64_elf_loader_info_t** out_loader_info) {
+    vfs_node_attr_t attr;
+    if(vfs_attr(path, &attr) != VFS_RESULT_OK) {
+        printf("Failed to get size of elf file\n");
+        return false;
+    }
+
+    assert(attr.type == VFS_NODE_TYPE_FILE && attr.size >= sizeof(elf64_elf_header_t));
+
+    elf64_elf_header_t* elf_data = heap_alloc(sizeof(elf64_elf_header_t));
+    if(vfs_read(path, elf_data, sizeof(elf64_elf_header_t), 0, nullptr) != VFS_RESULT_OK) {
+        printf("Failed to read elf header\n");
+        heap_free(elf_data, sizeof(elf64_elf_header_t));
+        return false;
+    }
+    if(!elf_supported(elf_data)) {
+        printf("Unsupported elf file\n");
+        heap_free(elf_data, sizeof(elf64_elf_header_t));
+        return false;
+    }
 
     elf64_elf_loader_info_t* loader_info = heap_alloc(sizeof(elf64_elf_loader_info_t));
-    if(!loader_info) { return NULL; }
-    memset(loader_info, 0, sizeof(*loader_info));
+    if(!loader_info) {
+        printf("Failed to allocate loader info\n");
+        heap_free(elf_data, sizeof(elf64_elf_header_t));
+        return false;
+    }
+    memset(loader_info, 0, sizeof(elf64_elf_loader_info_t));
 
-    assert(elf_header->e_type == ETYPE_EXEC);
-    load_elf_exec(process, elf_header, loader_info);
-    return loader_info;
+    if(!__elf_load_image(process, elf_data, path, loader_info)) {
+        printf("Failed to load elf image\n");
+        heap_free(elf_data, sizeof(elf64_elf_header_t));
+        heap_free(loader_info, sizeof(elf64_elf_loader_info_t));
+        return false;
+    }
+
+    *out_loader_info = loader_info;
+    return true;
 }

@@ -200,16 +200,19 @@ void arch_init_bsp() {
     uint8_t* elf_file = heap_alloc(attr.size);
     res = vfs_node->ops->read(vfs_node, elf_file, attr.size, 0, nullptr);
     assertf(res == VFS_RESULT_OK, "Failed to read hello.elf %d", res);
+    heap_free(elf_file, attr.size);
 
     // @todo: this is horrifc
     vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
     vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
     process_t* process = process_create(allocator);
-    elf64_elf_loader_info_t* loader_info = elf_load(process, (const elf64_elf_header_t*) elf_file);
-    assert(loader_info && "Failed to load test module");
+    elf64_elf_loader_info_t* elf_info;
+    assert(elf_load_file(process, &VFS_MAKE_ABS_PATH("hello.elf"), &elf_info) && "Failed to load init file");
     virt_addr_t user_stack_top = vmm_try_alloc_backed(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
-    user_stack_top = sysv_user_stack_init(process, user_stack_top, loader_info);
-    thread_t* thread = sched_arch_create_thread_user(process, user_stack_top, loader_info->entry_point);
+    uintptr_t user_rsp = sysv_user_stack_init(process, user_stack_top, elf_info);
+    printf("user_rsp: %p\n", user_rsp);
+    assert(user_rsp % 16 == 0 && "user_rsp is not 16-byte aligned");
+    thread_t* thread = sched_arch_create_thread_user(process, user_rsp, elf_info->executable_entry_point);
 
     process_add_thread(process, thread);
     sched_thread_schedule(thread);

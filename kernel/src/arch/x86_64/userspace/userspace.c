@@ -9,8 +9,8 @@ bool validate_user_buffer(process_t* proc, virt_addr_t addr, size_t size) {
     for(virt_addr_t i = addr; i < addr + size; i += PAGE_SIZE_DEFAULT) {
         vm_flags_t out_protection;
         vm_access_t out_access;
-        phys_addr_t phys = vm_resolve_protections(proc->allocator, i, &out_protection, &out_access);
-        if(phys == 0) { return false; }
+        phys_addr_t phys;
+        if(!vm_resolve_protections(proc->allocator, i, &phys, &out_protection, &out_access)) { return false; }
         if(out_access != VM_ACCESS_USER) { return false; }
     }
 

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <common/requests.h>
 #include <memory/memory.h>
 #include <memory/vmm.h>
@@ -14,14 +15,15 @@ void vm_memset(vm_allocator_t* allocator, virt_addr_t base, int value, size_t si
     size_t remaining = size;
 
     while(remaining > 0) {
-        phys_addr_t phys = vm_resolve(allocator, addr);
+        phys_addr_t phys;
+        if(!vm_resolve(allocator, addr, &phys)) { assert(false && "tried to memset in unmapped user memory"); }
 
         size_t page_offset = addr % PAGE_SIZE_DEFAULT;
         size_t chunk = PAGE_SIZE_DEFAULT - page_offset;
 
         if(chunk > remaining) chunk = remaining;
 
-        memset((void*) TO_HHDM(phys), value, chunk);
+        memset((void*) (TO_HHDM(phys) + page_offset), value, chunk);
 
         addr += chunk;
         remaining -= chunk;
@@ -52,15 +54,17 @@ void* vm_memcpy(vm_allocator_t* dest_alloc, vm_allocator_t* src_alloc, virt_addr
         void* src_ptr;
 
         if(dest_alloc->is_user) {
-            phys_addr_t dphys = vm_resolve(dest_alloc, daddr);
-            dst_ptr = (void*) TO_HHDM(dphys);
+            phys_addr_t dphys;
+            if(!vm_resolve(dest_alloc, daddr, &dphys)) { assert(false && "tried to memcpy in unmapped user memory"); }
+            dst_ptr = (void*) (TO_HHDM(dphys) + dpage_offset);
         } else {
             dst_ptr = (void*) daddr;
         }
 
         if(src_alloc->is_user) {
-            phys_addr_t sphys = vm_resolve(src_alloc, saddr);
-            src_ptr = (void*) TO_HHDM(sphys);
+            phys_addr_t sphys;
+            if(!vm_resolve(src_alloc, saddr, &sphys)) { assert(false && "tried to memcpy from unmapped user memory"); }
+            src_ptr = (void*) (TO_HHDM(sphys) + spage_offset);
         } else {
             src_ptr = (void*) saddr;
         }

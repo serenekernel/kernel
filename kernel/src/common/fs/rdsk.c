@@ -155,6 +155,7 @@ vfs_result_t rdsk_node_name(vfs_node_t* node, char* buffer, size_t length, size_
 
 vfs_result_t rdsk_node_attr(vfs_node_t* node, vfs_node_attr_t* attr) {
     attr->size = node->type == VFS_NODE_TYPE_FILE ? FILE(node)->size : 0;
+    attr->type = node->type;
     return VFS_RESULT_OK;
 }
 
@@ -221,6 +222,13 @@ vfs_result_t rdsk_node_readdir(vfs_node_t* node, size_t* offset, vfs_node_t** di
 
 vfs_result_t rdsk_node_read(vfs_node_t* node, void* buffer, size_t size, size_t offset, size_t* read_count) {
     if(node->type != VFS_NODE_TYPE_FILE) return VFS_RESULT_ERR_NOT_FILE;
+
+    if(buffer == nullptr || size == 0) {
+        assert(buffer == nullptr && size == 0);
+        assert(read_count != nullptr);
+        *read_count = FILE(node)->size;
+        return VFS_RESULT_OK;
+    }
 
     if(offset >= FILE(node)->size) {
         if(read_count) *read_count = 0;

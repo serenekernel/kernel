@@ -43,6 +43,7 @@ typedef struct {
 } elf64_program_header_t;
 
 #define PTYPE_LOAD 1
+#define PTYPE_INTERP 3
 #define PTYPE_PHDR 6
 
 #define PFLAGS_EXECUTE (1 << 0)

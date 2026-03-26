@@ -220,30 +220,12 @@ void vm_reprotect_page(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_acce
     spinlock_unlock(&allocator->lock);
 }
 
-phys_addr_t vm_resolve(vm_allocator_t* allocator, virt_addr_t virt_addr) {
+bool vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t* out_phys_addr, vm_flags_t* out_protection, vm_access_t* out_access) {
     spinlock_lock(&allocator->lock);
     uint64_t* pt = walk_if_exists(allocator, virt_addr);
     if(pt == NULL) {
         spinlock_unlock(&allocator->lock);
-        return 0;
-    }
-
-    uint64_t page_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
-    if(!(page_entry & PAGE_PRESENT_BIT)) {
-        spinlock_unlock(&allocator->lock);
-        return 0;
-    }
-
-    spinlock_unlock(&allocator->lock);
-    return page_entry & SMALL_PAGE_ADDRESS_MASK;
-}
-
-phys_addr_t vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_addr, vm_flags_t* out_protection, vm_access_t* out_access) {
-    spinlock_lock(&allocator->lock);
-    uint64_t* pt = walk_if_exists(allocator, virt_addr);
-    if(pt == NULL) {
-        spinlock_unlock(&allocator->lock);
-        return 0;
+        return false;
     }
 
     uint64_t page_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
@@ -251,11 +233,8 @@ phys_addr_t vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_a
 
     vm_flags_t protections = VM_READ_ONLY;
     if(page_entry & PAGE_RW_BIT) { protections |= VM_READ_WRITE; }
-
     if(!(page_entry & PAGE_EXECUTE_DISABLE_BIT)) { protections |= VM_EXECUTE; }
-
     if(!(page_entry & PAGE_GLOBAL_BIT)) { protections |= VM_GLOBAL; }
-
     if(!(page_entry & PAGE_PRESENT_BIT)) { protections |= VM_NON_PRESENT; }
 
     if(out_access) {
@@ -267,9 +246,15 @@ phys_addr_t vm_resolve_protections(vm_allocator_t* allocator, virt_addr_t virt_a
     }
 
     if(out_protection) { *out_protection = protections; }
+    if(out_phys_addr) { *out_phys_addr = page_entry & SMALL_PAGE_ADDRESS_MASK; }
 
-    return page_entry & SMALL_PAGE_ADDRESS_MASK;
+    return true;
 }
+
+bool vm_resolve(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t* out_phys_addr) {
+    return vm_resolve_protections(allocator, virt_addr, out_phys_addr, nullptr, nullptr);
+}
+
 
 void vm_unmap_page(vm_allocator_t* allocator, virt_addr_t virt_addr) {
     spinlock_lock(&allocator->lock);

@@ -119,3 +119,10 @@ vfs_result_t vfs_write(vfs_path_t* path, const void* buff, size_t size, size_t o
     if(res != VFS_RESULT_OK) return res;
     return node->ops->write(node, buff, size, offset, written_count);
 }
+
+vfs_result_t vfs_attr(vfs_path_t* path, vfs_node_attr_t* attr) {
+    vfs_node_t* node;
+    vfs_result_t res = vfs_lookup(path, &node);
+    if(res != VFS_RESULT_OK) return res;
+    return node->ops->attr(node, attr);
+}

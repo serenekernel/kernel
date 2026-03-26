@@ -1,5 +1,6 @@
 #include <common/arch.h>
 #include <common/ldr/sysv.h>
+#include <lib/buffer.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
 #include <string.h>
@@ -23,50 +24,39 @@ typedef enum : uint64_t {
     AUXV_SECURE = 23
 } auxv_entry_t;
 
-
-static virt_addr_t stackpush_8(virt_addr_t stack_top, uint64_t value) {
-    stack_top -= sizeof(uint64_t);
-    *(uint64_t*) stack_top = value;
-    return stack_top;
+// @todo: should we move these?
+void insert_u64(buffer_t* data, uint64_t value) {
+    buffer_append(data, (uint8_t*) &value, sizeof(value));
 }
 
-static virt_addr_t stackpush_auxv(virt_addr_t stack_top, auxv_entry_t type, uint64_t value) {
-    stack_top -= sizeof(uint64_t);
-    *(uint64_t*) stack_top = value;
-    stack_top -= sizeof(uint64_t);
-    *(uint64_t*) stack_top = (uint64_t) type;
-    return stack_top;
+void insert_auxv(buffer_t* data, auxv_entry_t entry, uint64_t value) {
+    buffer_append(data, (uint8_t*) &entry, sizeof(entry));
+    buffer_append(data, (uint8_t*) &value, sizeof(value));
 }
-
-#define LOCAL_STACK_SIZE 512
 
 virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top, elf64_elf_loader_info_t* loader_info) {
-    uint8_t* buf = (uint8_t*) heap_alloc(LOCAL_STACK_SIZE);
-    virt_addr_t buf_top = (virt_addr_t) buf + LOCAL_STACK_SIZE;
+    (void) process;
+    (void) loader_info;
+    (void) user_stack_top;
 
-    virt_addr_t str_top = buf_top;
+    printf("AT_PHDR: %p\n", loader_info->phdr_table);
 
-    virt_addr_t tbl = str_top;
+    buffer_t stack_buf = buffer_create(128);
+    insert_u64(&stack_buf, 0); // argc
+    insert_u64(&stack_buf, 0); // argv null
+    insert_u64(&stack_buf, 0); // envp null
 
-    tbl = stackpush_8(tbl, AUXV_NULL);
+    insert_auxv(&stack_buf, AUXV_PHDR, loader_info->phdr_table);
+    insert_auxv(&stack_buf, AUXV_PHENT, loader_info->phentsize);
+    insert_auxv(&stack_buf, AUXV_PHNUM, loader_info->phnum);
+    insert_auxv(&stack_buf, AUXV_PAGESZ, PAGE_SIZE_SMALL);
+    if(loader_info->interp_base != 0) { insert_auxv(&stack_buf, AUXV_BASE, loader_info->interp_base); }
+    insert_auxv(&stack_buf, AUXV_ENTRY, loader_info->image_entry_point);
+    insert_u64(&stack_buf, AUXV_NULL);
 
-    tbl = stackpush_auxv(tbl, AUXV_PAGESZ, PAGE_SIZE_DEFAULT);
-    tbl = stackpush_auxv(tbl, AUXV_SECURE, 0);
-    tbl = stackpush_auxv(tbl, AUXV_ENTRY, loader_info->entry_point);
-    tbl = stackpush_auxv(tbl, AUXV_PHENT, loader_info->phentsize);
-    tbl = stackpush_auxv(tbl, AUXV_PHDR, loader_info->phdr_table);
-    tbl = stackpush_auxv(tbl, AUXV_PHNUM, loader_info->phnum);
+    uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf.size), 16);
+    printf("stack_pointer: %p\n", (void*) stack_pointer);
+    vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, (virt_addr_t) stack_buf.data, stack_buf.size);
 
-    tbl = stackpush_8(tbl, 0); // envp end
-    tbl = stackpush_8(tbl, 0); // argv end
-
-    tbl = stackpush_8(tbl, 0); // argc
-
-    size_t data_size = buf_top - tbl;
-    virt_addr_t stack_pointer = ALIGN_DOWN(user_stack_top - data_size, 16);
-
-
-    vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, tbl, data_size);
-    heap_free(buf, LOCAL_STACK_SIZE);
     return stack_pointer;
 }
