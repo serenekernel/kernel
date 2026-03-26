@@ -49,9 +49,6 @@ syscall_ret_t syscall_sys_read(uint64_t fd, virt_addr_t buf, size_t count) {
     if(count == 0) { return SYSCALL_RET_VALUE(0); }
     if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
-    // @todo: vfs shit
-    if(fd == 0 || fd == 1 || fd == 2) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
-
     printf("syscall_sys_read: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
 
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
@@ -74,15 +71,6 @@ syscall_ret_t syscall_sys_read(uint64_t fd, virt_addr_t buf, size_t count) {
 syscall_ret_t syscall_sys_write(uint64_t fd, virt_addr_t buf, size_t count) {
     if(count == 0) { return SYSCALL_RET_VALUE(0); }
     if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
-
-    // @todo: vfs shit
-    if(fd == 0) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
-    if(fd == 1 || fd == 2) {
-        bool __prev = arch_disable_uap();
-        printf("%.*s", (int) count, (const char*) buf);
-        arch_restore_uap(__prev);
-        return SYSCALL_RET_VALUE(count);
-    }
 
     printf("syscall_sys_write: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
 
@@ -113,9 +101,6 @@ syscall_ret_t syscall_sys_close(uint64_t fd) {
 
 syscall_ret_t syscall_sys_seek(uint64_t fd, size_t offset, size_t whence) {
     printf("syscall_sys_seek: pid=%lu, fd=%d, offset=%ld, whence=%d\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, offset, whence);
-
-    // @todo: fix
-    if(fd == 0 || fd == 1 || fd == 2) { return SYSCALL_RET_VALUE(0); }
 
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
     fd_data_t* node = fd_store_get_fd(store, fd);

@@ -40,29 +40,22 @@ struct vfs_node_ops {
     // @param: res_node - the resulting node, if found
     vfs_result_t (*lookup)(vfs_node_t* node, char* name, vfs_node_t** out_node);
 
-    // @param: buff - the buffer to read into
+    // @param: buf - the buffer to read into
     // @param: size - the size of the buffer
     // @param: offset - the offset to read from
     // @param: read_count - set to the number of bytes read
     // @note: if buffer is null or size is 0, read_count is set to the size of the file and the return value is VFS_RESULT_OK
-    vfs_result_t (*read)(vfs_node_t* node, void* buff, size_t size, size_t offset, size_t* read_count);
+    vfs_result_t (*read)(vfs_node_t* node, void* buf, size_t size, size_t offset, size_t* read_count);
 
-    // @param: buff - the buffer to write from
+    // @param: buf - the buffer to write from
     // @param: size - the size of the buffer
     // @param: offset - the offset to write to
     // @param: written_count - set to the number of bytes written
-    vfs_result_t (*write)(vfs_node_t* node, const void* buff, size_t size, size_t offset, size_t* written_count);
-
-    // @param: buffer - the buffer to write the name into
-    // @param: length - the size of the buffer
-    // @param: out_size - the size of the buffer, set to the number of bytes written
-    // @note: if the buffer is null or the length is less then the lengthy of the name. the name is not written and the buffer is not modified and the return value will be VFS_RESULT_ERR_BUFFER_TOO_SMALL and out_size will be set to the required
-    // buffer size
-    vfs_result_t (*name)(vfs_node_t* node, char* buffer, size_t length, size_t* out_size);
+    vfs_result_t (*write)(vfs_node_t* node, const void* buf, size_t size, size_t offset, size_t* written_count);
 
     // @param: offset - the offset to read from (set to the next offset to read from)
-    // @param: dirent - set to the directory entry node, or nullptr if there are no more entries
-    vfs_result_t (*readdir)(vfs_node_t* node, size_t* offset, vfs_node_t** dirent);
+    // @param: name - set to the name of the directory entry, or nullptr if there are no more entries
+    vfs_result_t (*readdir)(vfs_node_t* node, size_t* offset, char** name);
 
     // @param: attr - the attribute struct to fill in
     vfs_result_t (*attr)(vfs_node_t* node, vfs_node_attr_t* attr);
@@ -105,6 +98,6 @@ vfs_result_t vfs_unmount(const char* path);
 vfs_result_t vfs_root(vfs_node_t** root_node);
 vfs_result_t vfs_lookup(vfs_path_t* path, vfs_node_t** result_node);
 
-vfs_result_t vfs_read(vfs_path_t* path, void* buff, size_t size, size_t offset, size_t* read_count);
-vfs_result_t vfs_write(vfs_path_t* path, const void* buff, size_t size, size_t offset, size_t* written_count);
+vfs_result_t vfs_read(vfs_path_t* path, void* buf, size_t size, size_t offset, size_t* read_count);
+vfs_result_t vfs_write(vfs_path_t* path, const void* buf, size_t size, size_t offset, size_t* written_count);
 vfs_result_t vfs_attr(vfs_path_t* path, vfs_node_attr_t* attr);

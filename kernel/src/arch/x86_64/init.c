@@ -32,6 +32,8 @@
 #include <string.h>
 #include <uacpi/uacpi.h>
 
+#include "common/fs/stdiofs.h"
+
 void setup_protections() {
     arch_memory_barrier();
     uint64_t cr4 = __read_cr4();
@@ -157,9 +159,11 @@ void arch_init_bsp() {
     assert(initramfs_file != nullptr && "initramfs.rdk not found");
 
     vfs_result_t res = vfs_mount(&fs_rdsk_ops, nullptr, (void*) initramfs_file->address);
-    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs  %d", res);
-
+    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs %d", res);
     printf("mounted initramfs\n");
+
+    res = vfs_mount(&fs_stdio_ops, "/dev/console", nullptr);
+    assertf(res == VFS_RESULT_OK, "Failed to mount stdio %d", res);
 
     vfs_node_t* root_node;
     res = vfs_root(&root_node);
@@ -167,25 +171,23 @@ void arch_init_bsp() {
 
     size_t offset = 0;
     while(1) {
-        vfs_node_t* dirent;
-        res = root_node->ops->readdir(root_node, &offset, &dirent);
+        char* dirent_name;
+        res = root_node->ops->readdir(root_node, &offset, &dirent_name);
         if(res == VFS_RESULT_ERR_NOT_FOUND) { break; }
         assertf(res == VFS_RESULT_OK, "Failed to readdir %d", res);
-        if(dirent == nullptr) {
+        if(dirent_name == nullptr) {
             // printf("dirent is null\n");
             break;
         }
 
-        size_t name_size;
-        res = dirent->ops->name(dirent, nullptr, 0, &name_size);
-        assertf(res == VFS_RESULT_ERR_BUFFER_TOO_SMALL, "Failed to get dirent name size %d", res);
-        char* name = heap_alloc(name_size);
-        res = dirent->ops->name(dirent, name, name_size, nullptr);
-        assertf(res == VFS_RESULT_OK, "Failed to get dirent name %d", res);
+        vfs_node_t* dirent;
+        res = root_node->ops->lookup(root_node, dirent_name, &dirent);
+        assertf(res == VFS_RESULT_OK, "Failed to lookup dirent %d", res);
+
         vfs_node_attr_t attr;
         res = dirent->ops->attr(dirent, &attr);
         assertf(res == VFS_RESULT_OK, "Failed to get dirent attr %d", res);
-        printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", name, attr.size);
+        printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", dirent_name, attr.size);
     }
 
 

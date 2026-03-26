@@ -5,6 +5,9 @@
 #include <spinlock.h>
 #include <stdatomic.h>
 
+#include "common/fs/fd_store.h"
+#include "common/fs/vfs.h"
+
 uint64_t process_next_pid = 0;
 
 process_t* process_create(vm_allocator_t* allocator) {
@@ -15,12 +18,13 @@ process_t* process_create(vm_allocator_t* allocator) {
     process->pid = atomic_fetch_add(&process_next_pid, 1);
     process->fd_store = fd_store_create();
 
-    // @hack: set stdin, stdout, stderr to NULL
-    fd_data_t* fd_data = (fd_data_t*) heap_alloc(sizeof(fd_data_t));
-    fd_data->node = NULL;
-    fd_store_set_fd(process->fd_store, 0, fd_data);
-    fd_store_set_fd(process->fd_store, 1, fd_data);
-    fd_store_set_fd(process->fd_store, 2, fd_data);
+    vfs_result_t res;
+    res = fd_store_open_fixed(process->fd_store, &VFS_MAKE_ABS_PATH("/dev/console/stdin"), 0);
+    assert(res == VFS_RESULT_OK);
+    res = fd_store_open_fixed(process->fd_store, &VFS_MAKE_ABS_PATH("/dev/console/stdout"), 1);
+    assert(res == VFS_RESULT_OK);
+    res = fd_store_open_fixed(process->fd_store, &VFS_MAKE_ABS_PATH("/dev/console/stderr"), 2);
+    assert(res == VFS_RESULT_OK);
 
     return process;
 }

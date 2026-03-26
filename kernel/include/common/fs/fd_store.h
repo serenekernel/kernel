@@ -22,3 +22,6 @@ bool fd_store_close(fd_store_t* fd_store, size_t index);
 
 fd_data_t* fd_store_get_fd(fd_store_t* fd_store, size_t index);
 void fd_store_set_fd(fd_store_t* fd_store, size_t index, fd_data_t* node);
+
+vfs_result_t fd_store_open(fd_store_t* fd_store, vfs_path_t* path);
+vfs_result_t fd_store_open_fixed(fd_store_t* fd_store, vfs_path_t* path, int fd_num);
