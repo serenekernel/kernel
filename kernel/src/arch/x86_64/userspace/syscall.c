@@ -9,7 +9,7 @@
 #include <common/userspace/sys_vfs.h>
 #include <common/userspace/userspace.h>
 
-#define SYSTRACE_ENABLED 1
+#define SYSTRACE_ENABLED 0
 void x86_64_handle_syscall();
 
 typedef syscall_ret_t (*fn_syscall_handler0_t)();
@@ -40,17 +40,18 @@ syscall_entry_t syscall_table[MAX_SYSCALL_NUMBER];
 
 const char* convert_syscall_number(syscall_nr_t nr) {
     switch(nr) {
-        case SYS_EXIT:         return "SYS_EXIT";
-        case SYS_OPEN:         return "SYS_OPEN";
-        case SYS_READ:         return "SYS_READ";
-        case SYS_WRITE:        return "SYS_WRITE";
-        case SYS_CLOSE:        return "SYS_CLOSE";
-        case SYS_SEEK:         return "SYS_SEEK";
-        case SYS_DEBUG_LOG:    return "SYS_DEBUG_LOG";
-        case SYS_TCB_SET:      return "SYS_TCB_SET";
-        case SYS_MEM_VM_MAP:   return "SYS_MEM_VM_MAP";
-        case SYS_MEM_VM_UNMAP: return "SYS_MEM_VM_UNMAP";
-        default:               return "UNKNOWN_SYSCALL";
+        case SYS_EXIT:           return "SYS_EXIT";
+        case SYS_OPEN:           return "SYS_OPEN";
+        case SYS_READ:           return "SYS_READ";
+        case SYS_WRITE:          return "SYS_WRITE";
+        case SYS_CLOSE:          return "SYS_CLOSE";
+        case SYS_SEEK:           return "SYS_SEEK";
+        case SYS_DEBUG_LOG:      return "SYS_DEBUG_LOG";
+        case SYS_TCB_SET:        return "SYS_TCB_SET";
+        case SYS_MEM_VM_MAP:     return "SYS_MEM_VM_MAP";
+        case SYS_MEM_VM_UNMAP:   return "SYS_MEM_VM_UNMAP";
+        case SYS_MEM_VM_PROTECT: return "SYS_MEM_VM_PROTECT";
+        default:                 return "UNKNOWN_SYSCALL";
     }
 }
 
@@ -180,4 +181,5 @@ void userspace_init() {
 
     SYSCALL_DISPATCHER(SYS_MEM_VM_MAP, syscall_sys_vm_map, 6);
     SYSCALL_DISPATCHER(SYS_MEM_VM_UNMAP, syscall_sys_vm_unmap, 2);
+    SYSCALL_DISPATCHER(SYS_MEM_VM_PROTECT, syscall_sys_vm_protect, 3);
 }

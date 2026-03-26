@@ -1,6 +1,7 @@
 #include <arch/internal/cpuid.h>
 #include <arch/internal/cr.h>
 #include <arch/msr.h>
+#include <assert.h>
 #include <common/arch.h>
 #include <common/cpu_local.h>
 #include <common/ipi.h>
@@ -127,7 +128,6 @@ uint64_t convert_vm_flags(vm_flags_t flags) {
     if(global) result |= PAGE_GLOBAL_BIT;
     if(write) result |= PAGE_RW_BIT;
     if(!execute) result |= PAGE_EXECUTE_DISABLE_BIT;
-
     return result;
 }
 

@@ -13,6 +13,7 @@ typedef enum : uint64_t {
     SYS_TCB_SET = 7,
     SYS_MEM_VM_MAP = 8,
     SYS_MEM_VM_UNMAP = 9,
+    SYS_MEM_VM_PROTECT = 10
 } syscall_nr_t;
 
 typedef enum : int64_t {

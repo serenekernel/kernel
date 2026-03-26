@@ -153,6 +153,77 @@ virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address,
     return new_node->base;
 }
 
+
+virt_addr_t vmm_alloc_fixed(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill) {
+    size_t total_size = page_count * PAGE_SIZE_DEFAULT;
+
+    vm_node_t* evicted[64];
+    size_t evicted_count = 0;
+
+    spinlock_lock(&allocator->lock);
+
+    while(true) {
+        rb_node_t* overlap = nullptr;
+        overlap = rb_find_exact(&allocator->vm_tree, address);
+
+        if(!overlap) {
+            rb_node_t* lower = rb_find_lower(&allocator->vm_tree, address);
+            if(lower) {
+                vm_node_t* lower_vm = (vm_node_t*) lower;
+                if(lower_vm->base + lower_vm->size > address) { overlap = lower; }
+            }
+        }
+
+        if(!overlap) {
+            rb_node_t* upper = rb_find_upper(&allocator->vm_tree, address);
+            if(upper) {
+                vm_node_t* upper_vm = (vm_node_t*) upper;
+                if(upper_vm->base < address + total_size) { overlap = upper; }
+            }
+        }
+
+        if(!overlap) { break; }
+
+        assert(evicted_count < 64 && "vmm_alloc_fixed: too many overlapping allocations");
+        evicted[evicted_count++] = (vm_node_t*) overlap;
+        rb_remove(&allocator->vm_tree, overlap);
+    }
+
+    phys_addr_t node_phys = pmm_alloc_page();
+    assert(node_phys != 0 && "vmm_alloc_fixed: failed to allocate memory for vm_node");
+
+    vm_node_t* new_node = (vm_node_t*) TO_HHDM(node_phys);
+    new_node->base = address;
+    new_node->size = total_size;
+    new_node->options_type = VM_OPTIONS_BACKED;
+
+    rb_insert(&allocator->vm_tree, &new_node->rb_node);
+    spinlock_unlock(&allocator->lock);
+
+    for(size_t i = 0; i < evicted_count; i++) {
+        vm_node_t* ev = evicted[i];
+        if(ev->options_type == VM_OPTIONS_BACKED) {
+            size_t ev_pages = ev->size / PAGE_SIZE_DEFAULT;
+            for(size_t j = 0; j < ev_pages; j++) {
+                phys_addr_t phys;
+                virt_addr_t vpage = ev->base + (j * PAGE_SIZE_DEFAULT);
+                if(!vm_resolve(allocator, vpage, &phys)) { continue; }
+                vm_unmap_page(allocator, vpage);
+                pmm_free_page(phys);
+            }
+        }
+        pmm_free_page((phys_addr_t) FROM_HHDM(ev));
+    }
+
+    for(size_t i = 0; i < page_count; i++) {
+        phys_addr_t phys = pmm_alloc_page();
+        if(zero_fill) { memset((void*) TO_HHDM(phys), 0, PAGE_SIZE_DEFAULT); }
+        vm_map_page(allocator, address + (i * PAGE_SIZE_DEFAULT), phys, access, cache, flags);
+    }
+
+    return address;
+}
+
 virt_addr_t vmm_alloc_bytes(vm_allocator_t* allocator, size_t object_size) {
     size_t page_count = ALIGN_UP(object_size, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
     vm_access_t access = allocator->is_user ? VM_ACCESS_USER : VM_ACCESS_KERNEL;

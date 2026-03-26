@@ -113,6 +113,10 @@ syscall_ret_t syscall_sys_close(uint64_t fd) {
 
 syscall_ret_t syscall_sys_seek(uint64_t fd, size_t offset, size_t whence) {
     printf("syscall_sys_seek: pid=%lu, fd=%d, offset=%ld, whence=%d\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, offset, whence);
+
+    // @todo: fix
+    if(fd == 0 || fd == 1 || fd == 2) { return SYSCALL_RET_VALUE(0); }
+
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
     fd_data_t* node = fd_store_get_fd(store, fd);
     if(!node) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
