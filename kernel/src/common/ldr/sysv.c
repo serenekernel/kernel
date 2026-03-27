@@ -5,6 +5,8 @@
 #include <memory/memory.h>
 #include <string.h>
 
+#include "memory/vmm.h"
+
 typedef enum : uint64_t {
     AUXV_NULL = 0,
     AUXV_IGNORE = 1,
@@ -35,15 +37,40 @@ void insert_auxv(buffer_t* data, auxv_entry_t entry, uint64_t value) {
 }
 
 virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top, elf64_elf_loader_info_t* loader_info) {
-    (void) process;
-    (void) loader_info;
-    (void) user_stack_top;
+    char* argv[] = {};
+    char* envp[] = {};
+    size_t argc = sizeof(argv) / sizeof(argv[0]);
+    size_t envc = sizeof(envp) / sizeof(envp[0]);
 
-    printf("AT_PHDR: %p\n", loader_info->phdr_table);
+    uintptr_t* argv_p = heap_alloc(sizeof(uintptr_t) * argc);
+    uintptr_t* envc_p = heap_alloc(sizeof(uintptr_t) * envc);
+
+    size_t size_of_info_block = 0;
+    for(size_t i = 0; i < argc; i++) { size_of_info_block += strlen(argv[i]) + 1; }
+    for(size_t i = 0; i < envc; i++) { size_of_info_block += strlen(envp[i]) + 1; }
+
+    uintptr_t arg_block = vmm_alloc_backed(process->allocator, ALIGN_UP(size_of_info_block, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+    uintptr_t offset = 0;
+
+    for(size_t i = 0; i < argc; i++) {
+        size_t len = strlen(argv[i]) + 1;
+        vm_memcpy(process->allocator, &kernel_allocator, (virt_addr_t) (arg_block + offset), (virt_addr_t) argv[i], len);
+        argv_p[i] = arg_block + offset;
+        offset += len;
+    }
+
+    for(size_t i = 0; i < envc; i++) {
+        size_t len = strlen(envp[i]) + 1;
+        vm_memcpy(process->allocator, &kernel_allocator, (virt_addr_t) (arg_block + offset), (virt_addr_t) envp[i], len);
+        envc_p[i] = arg_block + offset;
+        offset += len;
+    }
 
     buffer_t stack_buf = buffer_create(128);
-    insert_u64(&stack_buf, 0); // argc
+    insert_u64(&stack_buf, argc); // argc
+    for(size_t i = 0; i < argc; i++) { insert_u64(&stack_buf, argv_p[i]); }
     insert_u64(&stack_buf, 0); // argv null
+    for(size_t i = 0; i < envc; i++) { insert_u64(&stack_buf, envc_p[i]); }
     insert_u64(&stack_buf, 0); // envp null
 
     insert_auxv(&stack_buf, AUXV_PHDR, loader_info->phdr_table);
@@ -53,6 +80,7 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
     if(loader_info->interp_base != 0) { insert_auxv(&stack_buf, AUXV_BASE, loader_info->interp_base); }
     insert_auxv(&stack_buf, AUXV_ENTRY, loader_info->image_entry_point);
     insert_u64(&stack_buf, AUXV_NULL);
+
 
     uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf.size), 16);
     printf("stack_pointer: %p\n", (void*) stack_pointer);
