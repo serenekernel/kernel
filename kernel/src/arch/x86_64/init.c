@@ -190,26 +190,13 @@ void arch_init_bsp() {
         printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", dirent_name, attr.size);
     }
 
-
-    vfs_node_t* vfs_node;
-    res = vfs_lookup(&VFS_MAKE_ABS_PATH("hello.elf"), &vfs_node);
-    assertf(res == VFS_RESULT_OK, "Failed to lookup hello.elf %d", res);
-
-    vfs_node_attr_t attr;
-    res = vfs_node->ops->attr(vfs_node, &attr);
-    assertf(res == VFS_RESULT_OK, "Failed to get file attr %d", res);
-
-    uint8_t* elf_file = heap_alloc(attr.size);
-    res = vfs_node->ops->read(vfs_node, elf_file, attr.size, 0, nullptr);
-    assertf(res == VFS_RESULT_OK, "Failed to read hello.elf %d", res);
-    heap_free(elf_file, attr.size);
-
     // @todo: this is horrifc
     vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
     vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
     process_t* process = process_create(allocator);
     elf64_elf_loader_info_t* elf_info;
-    assert(elf_load_file(process, &VFS_MAKE_ABS_PATH("hello.elf"), &elf_info) && "Failed to load init file");
+    bool loaded_elf = elf_load_file(process, &VFS_MAKE_ABS_PATH("/usr/bin/bash"), &elf_info);
+    assert(loaded_elf && "Failed to load init file");
     virt_addr_t user_stack_top = vmm_try_alloc_backed(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
     uintptr_t user_rsp = sysv_user_stack_init(process, user_stack_top, elf_info);
     printf("user_rsp: %p\n", user_rsp);

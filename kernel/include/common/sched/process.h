@@ -9,8 +9,11 @@
 typedef struct thread thread_t;
 typedef struct process process_t;
 
+extern list_t process_list;
+
 struct process {
     uint64_t pid;
+    uint64_t process_group_pid;
     vm_allocator_t* allocator;
 
     fd_store_t* fd_store;
@@ -18,7 +21,9 @@ struct process {
 
     spinlock_t thread_lock;
     list_t thread_list;
+    list_node_t process_list_node;
 };
 
 process_t* process_create(vm_allocator_t* allocator);
 process_t* process_add_thread(process_t* process, thread_t* thread);
+process_t* process_get_by_pid(uint64_t pid);

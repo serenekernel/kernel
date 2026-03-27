@@ -4,26 +4,37 @@
 
 typedef enum : uint64_t {
     SYS_EXIT = 0,
+
     SYS_OPEN = 1,
     SYS_READ = 2,
     SYS_WRITE = 3,
     SYS_CLOSE = 4,
     SYS_SEEK = 5,
-    SYS_DEBUG_LOG = 6,
-    SYS_TCB_SET = 7,
-    SYS_MEM_VM_MAP = 8,
-    SYS_MEM_VM_UNMAP = 9,
-    SYS_MEM_VM_PROTECT = 10
+    SYS_ISATTY = 6,
+    SYS_STAT = 7,
+    SYS_STATAT = 8,
+    SYS_GETCWD = 9,
+
+    SYS_DEBUG_LOG = 20,
+    SYS_TCB_SET = 21,
+
+    SYS_VM_MAP = 30,
+    SYS_VM_UNMAP = 31,
+    SYS_VM_PROTECT = 32,
+
+    SYS_GET_PROC_INFO = 40,
 } syscall_nr_t;
 
 typedef enum : int64_t {
     ERROR_NOENT = 2, // No such file or directory
-    ERROR_FAULT = 14, // Bad address
     ERROR_NOMEM = 12, // Out of memory
+    ERROR_FAULT = 14, // Bad address
     ERROR_INVAL = 22, // Invalid argument
+    ERROR_NOTTY = 25, // Not a TTY
     ERROR_ROFS = 30, // Read-only file system
-    ERROR_BADFD = 81, // Bad file descriptor
-    ERROR_ENOSYS = 88 // Function not implemented
+    ERROR_NOSYS = 38, // Function not implemented
+    ERROR_RANGE = 34, // Out of range
+    ERROR_BADFD = 77, // Bad file descriptor
 } syscall_err_t;
 
 typedef struct {
@@ -43,7 +54,7 @@ static_assert(sizeof(syscall_ret_t) == 16, "syscall_ret_t must be 16 bytes");
 void userspace_init();
 
 const char* convert_syscall_number(syscall_nr_t nr);
-const char* convert_syscall_error(syscall_err_t err);
+const char* convert_syscall_ret(syscall_ret_t ret);
 
 #define SYSCALL_ASSERT_PARAM(cond)                           \
     do {                                                     \

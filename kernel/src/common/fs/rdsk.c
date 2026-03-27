@@ -92,7 +92,16 @@ static vfs_node_t* create_vfs_dir_node(vfs_t* vfs, rdsk_index_t index) {
     memset(node, 0, sizeof(vfs_node_t));
     node->vfs = vfs;
     node->type = VFS_NODE_TYPE_DIR;
-    node->private_data = get_dir(vfs, index);
+    rdsk_dir_t* dir = get_dir(vfs, index);
+    node->private_data = dir;
+
+    printf("parent_index: %lu, root_index: %lu, current_index: %lu\n", dir->parent_index, info->header->root_index, index);
+    if(dir->parent_index == 0) {
+        node->parent = vfs->mount_point;
+    } else {
+        node->parent = create_vfs_dir_node(vfs, dir->parent_index);
+    }
+
     node->ops = &g_node_ops;
     info->dir_cache[index - 1] = node;
     return node;
@@ -148,11 +157,7 @@ vfs_result_t rdsk_node_lookup(vfs_node_t* node, char* name, vfs_node_t** out_nod
     }
 
     if(strcmp(name, "..") == 0) {
-        if(DIR(node)->parent_index != 0) {
-            *out_node = create_vfs_dir_node(node->vfs, DIR(node)->parent_index);
-        } else {
-            *out_node = nullptr;
-        }
+        *out_node = node->parent;
         return VFS_RESULT_OK;
     }
 

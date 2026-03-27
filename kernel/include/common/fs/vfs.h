@@ -71,6 +71,7 @@ struct vfs {
 struct vfs_node {
     vfs_t* vfs;
     vfs_t* mounted_vfs;
+    vfs_node_t* parent;
     vfs_node_ops_t* ops;
     vfs_node_type_t type;
     void* private_data;
@@ -101,3 +102,4 @@ vfs_result_t vfs_lookup(vfs_path_t* path, vfs_node_t** result_node);
 vfs_result_t vfs_read(vfs_path_t* path, void* buf, size_t size, size_t offset, size_t* read_count);
 vfs_result_t vfs_write(vfs_path_t* path, const void* buf, size_t size, size_t offset, size_t* written_count);
 vfs_result_t vfs_attr(vfs_path_t* path, vfs_node_attr_t* attr);
+vfs_result_t vfs_path_to(vfs_node_t* node, char** out_buf, size_t* out_size);

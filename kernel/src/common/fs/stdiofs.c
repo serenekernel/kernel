@@ -127,7 +127,7 @@ static vfs_result_t stdio_root_node_attr(vfs_node_t* node, vfs_node_attr_t* attr
 
 static vfs_result_t stdio_root_node_lookup(vfs_node_t* node, char* name, vfs_node_t** out) {
     if(strcmp(name, "..") == 0) {
-        *out = NULL;
+        *out = node->parent;
         return 0;
     }
     if(strcmp(name, ".") == 0) {
@@ -195,24 +195,28 @@ static vfs_result_t stdio_mount(vfs_t* vfs) {
     nodes->root->vfs = vfs;
     nodes->root->type = VFS_NODE_TYPE_DIR;
     nodes->root->ops = &g_root_ops;
+    nodes->root->parent = vfs->mount_point;
 
     nodes->stdin = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stdin, 0, sizeof(vfs_node_t));
     nodes->stdin->vfs = vfs;
     nodes->stdin->type = VFS_NODE_TYPE_FILE;
     nodes->stdin->ops = &g_stdin_ops;
+    nodes->stdin->parent = nodes->root;
 
     nodes->stdout = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stdout, 0, sizeof(vfs_node_t));
     nodes->stdout->vfs = vfs;
     nodes->stdout->type = VFS_NODE_TYPE_FILE;
     nodes->stdout->ops = &g_stdout_ops;
+    nodes->stdout->parent = nodes->root;
 
     nodes->stderr = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stderr, 0, sizeof(vfs_node_t));
     nodes->stderr->vfs = vfs;
     nodes->stderr->type = VFS_NODE_TYPE_FILE;
     nodes->stderr->ops = &g_stderr_ops;
+    nodes->stderr->parent = nodes->root;
 
     vfs->private_data = (void*) nodes;
     return 0;

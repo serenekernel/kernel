@@ -40,29 +40,44 @@ syscall_entry_t syscall_table[MAX_SYSCALL_NUMBER];
 
 const char* convert_syscall_number(syscall_nr_t nr) {
     switch(nr) {
-        case SYS_EXIT:           return "SYS_EXIT";
-        case SYS_OPEN:           return "SYS_OPEN";
-        case SYS_READ:           return "SYS_READ";
-        case SYS_WRITE:          return "SYS_WRITE";
-        case SYS_CLOSE:          return "SYS_CLOSE";
-        case SYS_SEEK:           return "SYS_SEEK";
-        case SYS_DEBUG_LOG:      return "SYS_DEBUG_LOG";
-        case SYS_TCB_SET:        return "SYS_TCB_SET";
-        case SYS_MEM_VM_MAP:     return "SYS_MEM_VM_MAP";
-        case SYS_MEM_VM_UNMAP:   return "SYS_MEM_VM_UNMAP";
-        case SYS_MEM_VM_PROTECT: return "SYS_MEM_VM_PROTECT";
-        default:                 return "UNKNOWN_SYSCALL";
+        case SYS_EXIT: return "SYS_EXIT";
+
+        case SYS_OPEN:   return "SYS_OPEN";
+        case SYS_READ:   return "SYS_READ";
+        case SYS_WRITE:  return "SYS_WRITE";
+        case SYS_CLOSE:  return "SYS_CLOSE";
+        case SYS_SEEK:   return "SYS_SEEK";
+        case SYS_ISATTY: return "SYS_ISATTY";
+        case SYS_STAT:   return "SYS_STAT";
+        case SYS_STATAT: return "SYS_STATAT";
+        case SYS_GETCWD: return "SYS_GETCWD";
+
+        case SYS_DEBUG_LOG: return "SYS_DEBUG_LOG";
+
+        case SYS_TCB_SET: return "SYS_TCB_SET";
+
+        case SYS_VM_MAP:     return "SYS_MEM_VM_MAP";
+        case SYS_VM_UNMAP:   return "SYS_MEM_VM_UNMAP";
+        case SYS_VM_PROTECT: return "SYS_MEM_VM_PROTECT";
+
+        case SYS_GET_PROC_INFO: return "SYS_GET_PROC_INFO";
+
+        default: return "UNKNOWN_SYSCALL";
     }
 }
 
 const char* convert_syscall_ret(syscall_ret_t ret) {
     if(ret.is_error == false) { return "SUCCESS"; }
     switch(ret.err) {
-        case ERROR_INVAL: return "ERROR_INVAL";
-        case ERROR_NOMEM: return "ERROR_NOMEM";
         case ERROR_NOENT: return "ERROR_NOENT";
+        case ERROR_FAULT: return "ERROR_FAULT";
+        case ERROR_NOMEM: return "ERROR_NOMEM";
+        case ERROR_INVAL: return "ERROR_INVAL";
+        case ERROR_NOTTY: return "ERROR_NOTTY";
         case ERROR_ROFS:  return "ERROR_ROFS";
         case ERROR_BADFD: return "ERROR_BADFD";
+        case ERROR_NOSYS: return "ERROR_NOSYS";
+        case ERROR_RANGE: return "ERROR_RANGE";
         default:          return "UNKNOWN_SYSCALL_ERROR";
     }
 }
@@ -74,6 +89,7 @@ syscall_ret_t syscall_sys_invalid(uint64_t arg1, uint64_t arg2, uint64_t arg3, u
     (void) arg4;
     (void) arg5;
     (void) arg6;
+    assert(false);
     return SYSCALL_RET_ERROR(ERROR_INVAL);
 }
 
@@ -175,11 +191,18 @@ void userspace_init() {
     SYSCALL_DISPATCHER(SYS_CLOSE, syscall_sys_close, 1);
     SYSCALL_DISPATCHER(SYS_SEEK, syscall_sys_seek, 3);
 
+    SYSCALL_DISPATCHER(SYS_ISATTY, syscall_sys_is_a_tty, 1);
+
+    SYSCALL_DISPATCHER(SYS_STAT, syscall_sys_stat, 2);
+    SYSCALL_DISPATCHER(SYS_STATAT, syscall_sys_stat_at, 5);
+
+    SYSCALL_DISPATCHER(SYS_GETCWD, syscall_sys_getcwd, 2);
+
     SYSCALL_DISPATCHER(SYS_DEBUG_LOG, syscall_sys_debug_log, 2);
 
     SYSCALL_DISPATCHER(SYS_TCB_SET, syscall_sys_tcb_set, 1);
-
-    SYSCALL_DISPATCHER(SYS_MEM_VM_MAP, syscall_sys_vm_map, 6);
-    SYSCALL_DISPATCHER(SYS_MEM_VM_UNMAP, syscall_sys_vm_unmap, 2);
-    SYSCALL_DISPATCHER(SYS_MEM_VM_PROTECT, syscall_sys_vm_protect, 3);
+    SYSCALL_DISPATCHER(SYS_GET_PROC_INFO, syscall_sys_get_proc_info, 3)
+    SYSCALL_DISPATCHER(SYS_VM_MAP, syscall_sys_vm_map, 6);
+    SYSCALL_DISPATCHER(SYS_VM_UNMAP, syscall_sys_vm_unmap, 2);
+    SYSCALL_DISPATCHER(SYS_VM_PROTECT, syscall_sys_vm_protect, 3);
 }
