@@ -17,6 +17,7 @@ void init_cpu_local_data(kernel_cpu_local_t* cpu_local, uint32_t core_id, uint32
     cpu_local->lapic_id = lapic_id;
     cpu_local->current_irql = IRQL_PASSIVE;
     cpu_local->dpc_queue = NULL;
+    cpu_local->dpc_executing = false;
     cpu_local->preempt_pending = false;
     cpu_local->current_thread = NULL;
     cpu_local->sched = (scheduler_t) {

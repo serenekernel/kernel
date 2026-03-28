@@ -20,7 +20,8 @@ typedef enum {
 
 typedef enum {
     VFS_NODE_TYPE_FILE,
-    VFS_NODE_TYPE_DIR
+    VFS_NODE_TYPE_DIR,
+    VFS_NODE_TYPE_CHARDEV
 } vfs_node_type_t;
 
 typedef struct {

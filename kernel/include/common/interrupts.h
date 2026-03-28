@@ -13,3 +13,7 @@ bool interrupts_enabled();
 
 void interrupts_setup_bsp();
 void interrupts_setup_ap();
+
+void interrupts_route_irq(uint8_t irq, uint8_t vector);
+void interrupts_unmask_irq(uint8_t irq);
+void interrupts_mask_irq(uint8_t irq);

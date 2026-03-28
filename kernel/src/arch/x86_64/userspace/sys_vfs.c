@@ -108,10 +108,10 @@ syscall_ret_t syscall_sys_seek(uint64_t fd, size_t offset, size_t whence) {
     if(!node) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
     if(!node->node) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
     if(node->node->type == VFS_NODE_TYPE_DIR) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
-
+    if(node->node->type == VFS_NODE_TYPE_CHARDEV) { return SYSCALL_RET_ERROR(ERROR_SPIPE); }
     int64_t signed_offset = (int64_t) offset;
     vfs_node_attr_t node_attr;
-    if(node->node->ops->attr(node->node, &node_attr) != VFS_RESULT_OK) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
+    if(node->node->ops->attr(node->node, &node_attr) != VFS_RESULT_OK) { return SYSCALL_RET_ERROR(ERROR_SPIPE); }
 
     int64_t signed_file_size = (int64_t) node_attr.size;
 
@@ -126,8 +126,8 @@ syscall_ret_t syscall_sys_seek(uint64_t fd, size_t offset, size_t whence) {
         return SYSCALL_RET_ERROR(ERROR_INVAL);
     }
 
-
-    if(new_cursor < 0 || new_cursor > signed_file_size) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
+    printf("new_cursor=%ld, file size=%ld\n", new_cursor, signed_file_size);
+    if(new_cursor < 0 || new_cursor > signed_file_size) { return SYSCALL_RET_ERROR(ERROR_RANGE); }
     node->cursor = new_cursor;
 
     return SYSCALL_RET_VALUE(0);
@@ -140,6 +140,8 @@ syscall_ret_t syscall_sys_is_a_tty(uint64_t fd) {
     if(!node) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
     if(!node->node) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
     if(node->node->type == VFS_NODE_TYPE_DIR) { return SYSCALL_RET_ERROR(ERROR_BADFD); }
+    // @todo: NOT ALL CHAR DEVS ARE TTYS
+    if(node->node->type == VFS_NODE_TYPE_CHARDEV) { return SYSCALL_RET_VALUE(0); }
 
     return SYSCALL_RET_ERROR(ERROR_NOTTY);
 }
@@ -181,9 +183,10 @@ syscall_ret_t stat_internal(serene_stat_t* statbuf, vfs_node_t* vfs_node) {
     statbuf->st_nlink = 1; // @todo:
     statbuf->st_mode = 0;
     switch(attr.type) {
-        case VFS_NODE_TYPE_FILE: statbuf->st_mode |= MODE_TYPE_FILE; break;
-        case VFS_NODE_TYPE_DIR:  statbuf->st_mode |= MODE_TYPE_DIR; break;
-        default:                 assert(false); return SYSCALL_RET_ERROR(ERROR_FAULT);
+        case VFS_NODE_TYPE_FILE:    statbuf->st_mode |= MODE_TYPE_FILE; break;
+        case VFS_NODE_TYPE_DIR:     statbuf->st_mode |= MODE_TYPE_DIR; break;
+        case VFS_NODE_TYPE_CHARDEV: statbuf->st_mode |= MODE_TYPE_CHAR; break;
+        default:                    assert(false); return SYSCALL_RET_ERROR(ERROR_FAULT);
     }
 
     // @todo: horrifc

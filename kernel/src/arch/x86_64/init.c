@@ -21,6 +21,7 @@
 #include <common/requests.h>
 #include <common/sched/process.h>
 #include <common/sched/sched.h>
+#include <common/tty.h>
 #include <common/userspace/userspace.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
@@ -33,6 +34,7 @@
 #include <uacpi/uacpi.h>
 
 #include "common/fs/stdiofs.h"
+#include "device/ps2kbd.h"
 
 void setup_protections() {
     arch_memory_barrier();
@@ -197,11 +199,18 @@ void arch_init_bsp() {
     elf64_elf_loader_info_t* elf_info;
     bool loaded_elf = elf_load_file(process, &VFS_MAKE_ABS_PATH("/usr/bin/bash"), &elf_info);
     assert(loaded_elf && "Failed to load init file");
-    virt_addr_t user_stack_top = vmm_try_alloc_backed(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+    virt_addr_t user_stack_top = vmm_try_alloc_demand(process->allocator, 0x00007ffffffff000 - (1024 * PAGE_SIZE_DEFAULT), 1024, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE) + (1024 * PAGE_SIZE_DEFAULT);
+    if(!vmm_pre_allocate_demand_pages(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16)) {
+        printf("Failed to pre-allocate user stack pages\n");
+        assert(false);
+    }
     uintptr_t user_rsp = sysv_user_stack_init(process, user_stack_top, elf_info);
     printf("user_rsp: %p\n", user_rsp);
     assert(user_rsp % 16 == 0 && "user_rsp is not 16-byte aligned");
     thread_t* thread = sched_arch_create_thread_user(process, user_rsp, elf_info->executable_entry_point);
+
+    g_tty = tty_init();
+    ps2kbd_init();
 
     process_add_thread(process, thread);
     sched_thread_schedule(thread);

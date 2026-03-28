@@ -1,8 +1,8 @@
 #include <common/fs/vfs.h>
+#include <common/tty.h>
 #include <memory/heap.h>
+#include <stdio.h>
 #include <string.h>
-
-#include "stdio.h"
 
 #define NODES(VFS) ((stdio_nodes_t*) (VFS)->private_data)
 
@@ -40,6 +40,14 @@ static vfs_result_t stdio_stdin_node_read(vfs_node_t* node, void* buf, size_t si
     (void) offset;
     (void) read_count;
 
+    if(g_tty) {
+        char* data = tty_read(g_tty, read_count);
+        size_t to_copy = *read_count < size ? *read_count : size;
+        memcpy(buf, data, to_copy);
+        heap_free(data, *read_count);
+        *read_count = to_copy;
+        return VFS_RESULT_OK;
+    }
     return VFS_RESULT_ERR_UNSUPPORTED;
 }
 static vfs_result_t stdio_stderr_node_read(vfs_node_t* node, void* buf, size_t size, size_t offset, size_t* read_count) {
@@ -200,21 +208,21 @@ static vfs_result_t stdio_mount(vfs_t* vfs) {
     nodes->stdin = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stdin, 0, sizeof(vfs_node_t));
     nodes->stdin->vfs = vfs;
-    nodes->stdin->type = VFS_NODE_TYPE_FILE;
+    nodes->stdin->type = VFS_NODE_TYPE_CHARDEV;
     nodes->stdin->ops = &g_stdin_ops;
     nodes->stdin->parent = nodes->root;
 
     nodes->stdout = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stdout, 0, sizeof(vfs_node_t));
     nodes->stdout->vfs = vfs;
-    nodes->stdout->type = VFS_NODE_TYPE_FILE;
+    nodes->stdout->type = VFS_NODE_TYPE_CHARDEV;
     nodes->stdout->ops = &g_stdout_ops;
     nodes->stdout->parent = nodes->root;
 
     nodes->stderr = heap_alloc(sizeof(vfs_node_t));
     memset(nodes->stderr, 0, sizeof(vfs_node_t));
     nodes->stderr->vfs = vfs;
-    nodes->stderr->type = VFS_NODE_TYPE_FILE;
+    nodes->stderr->type = VFS_NODE_TYPE_CHARDEV;
     nodes->stderr->ops = &g_stderr_ops;
     nodes->stderr->parent = nodes->root;
 

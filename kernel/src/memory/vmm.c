@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <common/arch.h>
 #include <common/requests.h>
+#include <common/sched/process.h>
 #include <lib/spinlock.h>
 #include <memory/memory.h>
 #include <memory/pagedb.h>
@@ -9,6 +10,9 @@
 #include <memory/vmm.h>
 #include <rbtree.h>
 #include <string.h>
+
+#include "arch/cpu_local.h"
+#include "common/sched/thread.h"
 
 vm_allocator_t kernel_allocator;
 
@@ -101,6 +105,20 @@ virt_addr_t vmm_alloc_backed(vm_allocator_t* allocator, size_t page_count, vm_ac
     return node->base;
 }
 
+virt_addr_t vmm_alloc_demand(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
+    vm_node_t* node = vmm_alloc_raw(allocator, page_count);
+    assert(node != nullptr && "vmm_alloc_demand: failed to allocate vm_node");
+    assert(page_count > 0 && "vmm_alloc_demand: page_count must be greater than 0");
+    assert((flags & VM_NON_PRESENT) != 0 && "vmm_alloc_demand: must allocate demand paging memory with VM_NON_PRESENT flag");
+
+    node->options_type = VM_OPTIONS_BACKED_DEMAND;
+    node->options.access = access;
+    node->options.cache = cache;
+    node->options.flags = flags;
+
+    return node->base;
+}
+
 virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill) {
     size_t total_size = page_count * PAGE_SIZE_DEFAULT;
 
@@ -149,6 +167,55 @@ virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address,
         if(zero_fill) { memset((void*) TO_HHDM(phys), 0, PAGE_SIZE_DEFAULT); }
         vm_map_page(allocator, new_node->base + (i * PAGE_SIZE_DEFAULT), phys, access, cache, flags);
     }
+
+    return new_node->base;
+}
+
+virt_addr_t vmm_try_alloc_demand(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags) {
+    size_t total_size = page_count * PAGE_SIZE_DEFAULT;
+
+    spinlock_lock(&allocator->lock);
+    rb_node_t* existing_node = rb_find_exact(&allocator->vm_tree, address);
+    if(existing_node != nullptr) {
+        spinlock_unlock(&allocator->lock);
+        return 0;
+    }
+
+    // Check for overlaps
+    rb_node_t* lower_node = rb_find_lower(&allocator->vm_tree, address);
+    if(lower_node != nullptr) {
+        vm_node_t* lower_vm_node = (vm_node_t*) lower_node;
+        if(lower_vm_node->base + lower_vm_node->size > address) {
+            spinlock_unlock(&allocator->lock);
+            return 0;
+        }
+    }
+
+    rb_node_t* upper_node = rb_find_upper(&allocator->vm_tree, address);
+    if(upper_node != nullptr) {
+        vm_node_t* upper_vm_node = (vm_node_t*) upper_node;
+        if(address + total_size > upper_vm_node->base) {
+            spinlock_unlock(&allocator->lock);
+            return 0;
+        }
+    }
+
+    phys_addr_t node_phys = pmm_alloc_page();
+    if(node_phys == 0) {
+        spinlock_unlock(&allocator->lock);
+        return 0;
+    }
+
+    vm_node_t* new_node = (vm_node_t*) (TO_HHDM(node_phys));
+    new_node->base = address;
+    new_node->size = total_size;
+    new_node->options_type = VM_OPTIONS_BACKED_DEMAND;
+    new_node->options.access = access;
+    new_node->options.cache = cache;
+    new_node->options.flags = flags;
+
+    rb_insert(&allocator->vm_tree, &new_node->rb_node);
+    spinlock_unlock(&allocator->lock);
 
     return new_node->base;
 }
@@ -258,7 +325,7 @@ void vmm_free(vm_allocator_t* allocator, virt_addr_t addr) {
 
     vm_node_t* vm_node = (vm_node_t*) node;
 
-    if(vm_node->options_type == VM_OPTIONS_BACKED) {
+    if(vm_node->options_type == VM_OPTIONS_BACKED || vm_node->options_type == VM_OPTIONS_BACKED_DEMAND) {
         size_t page_count = vm_node->size / PAGE_SIZE_DEFAULT;
 
         for(size_t i = 0; i < page_count; i++) {
@@ -270,6 +337,41 @@ void vmm_free(vm_allocator_t* allocator, virt_addr_t addr) {
     }
 
     pmm_free_page((phys_addr_t) FROM_HHDM(vm_node));
+}
+
+bool vmm_pre_allocate_demand_pages(vm_allocator_t* allocator, virt_addr_t address, size_t page_count) {
+    rb_node_t* node = rb_find_within(&allocator->vm_tree, address);
+    if(!node) return false;
+    vm_node_t* vm_node = (vm_node_t*) node;
+    size_t page_index = (address - vm_node->base) / PAGE_SIZE_DEFAULT;
+    if(vm_node->options_type == VM_OPTIONS_BACKED_DEMAND) {
+        for(size_t i = 0; i < page_count; i++) {
+            phys_addr_t phys = pmm_alloc_page();
+            if(phys == 0) { return false; }
+            memset((void*) TO_HHDM(phys), 0, PAGE_SIZE_DEFAULT);
+            vm_map_page(allocator, vm_node->base + ((page_index + i) * PAGE_SIZE_DEFAULT), phys, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE);
+        }
+        return true;
+    }
+    return false;
+}
+
+bool vm_handle_page_fault(vm_fault_reason_t reason, virt_addr_t fault_address) {
+    process_t* process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
+    if(!process) return false;
+    rb_node_t* node = rb_find_within(&process->allocator->vm_tree, fault_address);
+    if(!node) return false;
+    if(reason != VM_FAULT_NOT_PRESENT) { return false; }
+    vm_node_t* vm_node = (vm_node_t*) node;
+    if(vm_node->options_type == VM_OPTIONS_BACKED_DEMAND) {
+        size_t page_index = (fault_address - vm_node->base) / PAGE_SIZE_DEFAULT;
+        phys_addr_t phys = pmm_alloc_page();
+        if(phys == 0) { return false; }
+        memset((void*) TO_HHDM(phys), 0, PAGE_SIZE_DEFAULT);
+        vm_map_page(process->allocator, vm_node->base + (page_index * PAGE_SIZE_DEFAULT), phys, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE);
+        return true;
+    }
+    return false;
 }
 
 #define MAP_SEGMENT(name, map_type)                                                                                                                                                             \

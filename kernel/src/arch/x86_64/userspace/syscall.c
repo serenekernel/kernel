@@ -4,12 +4,13 @@
 #include <assert.h>
 #include <common/sched/process.h>
 #include <common/userspace/sys_debug.h>
+#include <common/userspace/sys_ioctl.h>
 #include <common/userspace/sys_mem.h>
 #include <common/userspace/sys_proc.h>
 #include <common/userspace/sys_vfs.h>
 #include <common/userspace/userspace.h>
 
-#define SYSTRACE_ENABLED 0
+#define SYSTRACE_ENABLED 1
 void x86_64_handle_syscall();
 
 typedef syscall_ret_t (*fn_syscall_handler0_t)();
@@ -62,6 +63,8 @@ const char* convert_syscall_number(syscall_nr_t nr) {
 
         case SYS_GET_PROC_INFO: return "SYS_GET_PROC_INFO";
 
+        case SYS_IOCTL: return "SYS_IOCTL";
+
         default: return "UNKNOWN_SYSCALL";
     }
 }
@@ -70,14 +73,15 @@ const char* convert_syscall_ret(syscall_ret_t ret) {
     if(ret.is_error == false) { return "SUCCESS"; }
     switch(ret.err) {
         case ERROR_NOENT: return "ERROR_NOENT";
-        case ERROR_FAULT: return "ERROR_FAULT";
         case ERROR_NOMEM: return "ERROR_NOMEM";
+        case ERROR_FAULT: return "ERROR_FAULT";
         case ERROR_INVAL: return "ERROR_INVAL";
         case ERROR_NOTTY: return "ERROR_NOTTY";
+        case ERROR_SPIPE: return "ERROR_SPIPE";
         case ERROR_ROFS:  return "ERROR_ROFS";
-        case ERROR_BADFD: return "ERROR_BADFD";
         case ERROR_NOSYS: return "ERROR_NOSYS";
         case ERROR_RANGE: return "ERROR_RANGE";
+        case ERROR_BADFD: return "ERROR_BADFD";
         default:          return "UNKNOWN_SYSCALL_ERROR";
     }
 }
@@ -205,4 +209,6 @@ void userspace_init() {
     SYSCALL_DISPATCHER(SYS_VM_MAP, syscall_sys_vm_map, 6);
     SYSCALL_DISPATCHER(SYS_VM_UNMAP, syscall_sys_vm_unmap, 2);
     SYSCALL_DISPATCHER(SYS_VM_PROTECT, syscall_sys_vm_protect, 3);
+
+    SYSCALL_DISPATCHER(SYS_IOCTL, syscall_sys_ioctl, 2);
 }

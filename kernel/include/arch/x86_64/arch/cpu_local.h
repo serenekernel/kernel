@@ -14,6 +14,7 @@ struct kernel_cpu_local {
     tss_t* cpu_tss;
     irql_t current_irql;
     dpc_queue_t* dpc_queue;
+    bool dpc_executing;
     bool preempt_pending;
     uint32_t core_id;
     uint32_t lapic_id;

@@ -7,6 +7,8 @@ typedef struct {
     size_t capacity;
 } buffer_t;
 
-buffer_t buffer_create(size_t capacity);
+buffer_t* buffer_create(size_t capacity);
 void buffer_free(buffer_t* buffer);
 void buffer_append(buffer_t* buffer, const void* data, size_t size);
+void buffer_slice(buffer_t* buffer, size_t offset, size_t size);
+void buffer_clear(buffer_t* buffer);

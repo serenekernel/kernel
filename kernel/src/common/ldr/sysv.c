@@ -88,7 +88,7 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
     size_t argc = sizeof(argv) / sizeof(argv[0]);
     size_t envc = sizeof(envp) / sizeof(envp[0]);
 
-    buffer_t stack_buf = buffer_create(128);
+    buffer_t* stack_buf = buffer_create(128);
 
 
     size_t out_size_of_info_block;
@@ -99,27 +99,27 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
         return 0;
     }
 
-    insert_u64(&stack_buf, argc); // argc
-    for(size_t i = 0; i < argc; i++) { insert_u64(&stack_buf, info_block.argv_p[i]); }
-    insert_u64(&stack_buf, 0); // argv null
-    for(size_t i = 0; i < envc; i++) { insert_u64(&stack_buf, info_block.envp_p[i]); }
-    insert_u64(&stack_buf, 0); // envp null
+    insert_u64(stack_buf, argc); // argc
+    for(size_t i = 0; i < argc; i++) { insert_u64(stack_buf, info_block.argv_p[i]); }
+    insert_u64(stack_buf, 0); // argv null
+    for(size_t i = 0; i < envc; i++) { insert_u64(stack_buf, info_block.envp_p[i]); }
+    insert_u64(stack_buf, 0); // envp null
 
     heap_free(info_block.argv_p, sizeof(uintptr_t) * (argc + 1));
     heap_free(info_block.envp_p, sizeof(uintptr_t) * (envc + 1));
 
-    insert_auxv(&stack_buf, AUXV_PHDR, loader_info->phdr_table);
-    insert_auxv(&stack_buf, AUXV_PHENT, loader_info->phentsize);
-    insert_auxv(&stack_buf, AUXV_PHNUM, loader_info->phnum);
-    insert_auxv(&stack_buf, AUXV_PAGESZ, PAGE_SIZE_SMALL);
-    if(loader_info->interp_base != 0) { insert_auxv(&stack_buf, AUXV_BASE, loader_info->interp_base); }
-    insert_auxv(&stack_buf, AUXV_ENTRY, loader_info->image_entry_point);
-    insert_u64(&stack_buf, AUXV_NULL);
+    insert_auxv(stack_buf, AUXV_PHDR, loader_info->phdr_table);
+    insert_auxv(stack_buf, AUXV_PHENT, loader_info->phentsize);
+    insert_auxv(stack_buf, AUXV_PHNUM, loader_info->phnum);
+    insert_auxv(stack_buf, AUXV_PAGESZ, PAGE_SIZE_SMALL);
+    if(loader_info->interp_base != 0) { insert_auxv(stack_buf, AUXV_BASE, loader_info->interp_base); }
+    insert_auxv(stack_buf, AUXV_ENTRY, loader_info->image_entry_point);
+    insert_u64(stack_buf, AUXV_NULL);
 
 
-    uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf.size), 16);
+    uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf->size), 16);
     printf("stack_pointer: %p\n", (void*) stack_pointer);
-    vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, (virt_addr_t) stack_buf.data, stack_buf.size);
+    vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, (virt_addr_t) stack_buf->data, stack_buf->size);
 
     return stack_pointer;
 }

@@ -7,7 +7,8 @@
 
 typedef enum {
     VM_OPTIONS_NONE = 0,
-    VM_OPTIONS_BACKED
+    VM_OPTIONS_BACKED,
+    VM_OPTIONS_BACKED_DEMAND,
 } vm_node_options_t;
 
 typedef struct {
@@ -17,6 +18,11 @@ typedef struct {
 
     vm_node_options_t options_type;
     union {
+        struct {
+            vm_access_t access;
+            vm_cache_t cache;
+            vm_flags_t flags;
+        };
     } options;
 } vm_node_t;
 
@@ -47,11 +53,12 @@ vm_node_t* vmm_alloc_raw(vm_allocator_t* allocator, size_t page_count);
 virt_addr_t vmm_alloc(vm_allocator_t* allocator, size_t page_count);
 virt_addr_t vmm_alloc_demand(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags);
 virt_addr_t vmm_alloc_backed(vm_allocator_t* allocator, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill);
+virt_addr_t vmm_try_alloc_demand(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags);
 virt_addr_t vmm_try_alloc_backed(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill);
 virt_addr_t vmm_alloc_bytes(vm_allocator_t* allocator, size_t object_size);
 virt_addr_t vmm_alloc_aligned_bytes(vm_allocator_t* allocator, size_t object_size, size_t alignment);
 virt_addr_t vmm_alloc_fixed(vm_allocator_t* allocator, virt_addr_t address, size_t page_count, vm_access_t access, vm_cache_t cache, vm_flags_t flags, bool zero_fill);
-
+bool vmm_pre_allocate_demand_pages(vm_allocator_t* allocator, virt_addr_t address, size_t page_count);
 void vmm_free(vm_allocator_t* allocator, virt_addr_t addr);
 
 void vm_map_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t phys_addr, vm_access_t access, vm_cache_t cache, vm_flags_t flags);

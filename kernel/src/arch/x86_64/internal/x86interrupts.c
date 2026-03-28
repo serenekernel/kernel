@@ -7,6 +7,8 @@
 #include <common/irql.h>
 #include <memory/memory.h>
 
+#include "memory/vmm.h"
+
 extern void setup_idt_bsp();
 extern void setup_idt_ap();
 
@@ -40,7 +42,7 @@ void x86_64_dispatch_interrupt(interrupt_frame_t* frame) {
 void x86_64_dispatch_exception(interrupt_frame_t* frame) {
     arch_restore_uap(true);
 
-    if(CPU_LOCAL_READ(faultable.enabled)) {
+    if(CPU_LOCAL_READ(faultable.enabled) && (frame->vector == 0x0D || frame->vector == 0x0E)) {
         if(x86_64_fred_enabled()) {
             fred_frame_t* fred_frame = (fred_frame_t*) frame->internal_frame;
             fred_frame->rip = CPU_LOCAL_READ(faultable.redirect);
@@ -50,6 +52,14 @@ void x86_64_dispatch_exception(interrupt_frame_t* frame) {
         }
 
         return;
+    }
+
+    if(frame->vector == 0x0E) {
+        vm_fault_reason_t reason = VM_FAULT_UKKNOWN;
+        if((frame->error & (1 << 0)) == 0) { reason = VM_FAULT_NOT_PRESENT; }
+        if(vm_handle_page_fault(reason, frame->interrupt_data)) { return; }
+
+        arch_panic_int(frame);
     }
 
     arch_panic_int(frame);

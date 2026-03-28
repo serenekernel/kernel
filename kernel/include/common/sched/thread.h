@@ -7,6 +7,7 @@ typedef enum thread_state thread_state_t;
 
 enum thread_state {
     THREAD_STATE_READY,
+    THREAD_STATE_BLOCKED,
     THREAD_STATE_RUNNING,
     THREAD_STATE_DEAD,
 };
@@ -19,4 +20,5 @@ struct thread {
     struct scheduler* sched;
     list_node_t list_node_sched;
     list_node_t list_node_proc;
+    list_node_t list_node_wait;
 };

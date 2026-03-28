@@ -23,6 +23,7 @@ typedef enum : uint64_t {
     SYS_VM_PROTECT = 32,
 
     SYS_GET_PROC_INFO = 40,
+    SYS_IOCTL = 41
 } syscall_nr_t;
 
 typedef enum : int64_t {
@@ -31,6 +32,7 @@ typedef enum : int64_t {
     ERROR_FAULT = 14, // Bad address
     ERROR_INVAL = 22, // Invalid argument
     ERROR_NOTTY = 25, // Not a TTY
+    ERROR_SPIPE = 29, // Illegal seek
     ERROR_ROFS = 30, // Read-only file system
     ERROR_NOSYS = 38, // Function not implemented
     ERROR_RANGE = 34, // Out of range

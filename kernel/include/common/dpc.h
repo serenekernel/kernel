@@ -12,6 +12,8 @@ typedef struct {
 } dpc_queue_t;
 
 struct dpc {
+    bool in_use;
+    bool one_shot;
     fn_dpc_handler_t handler;
     void* arg;
 
@@ -24,7 +26,7 @@ void dpc_init_queue();
 // @brief Creates a new DPC object.
 // @param handler The handler function to call when the DPC is executed.
 // @return A pointer to the newly created DPC object, or NULL if allocation fails.
-dpc_t* dpc_create(fn_dpc_handler_t handler);
+dpc_t* dpc_create(fn_dpc_handler_t handler, bool one_shot);
 
 // @brief Destroys a DPC object.
 // @param dpc The DPC object to destroy.

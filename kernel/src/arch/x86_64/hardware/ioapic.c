@@ -210,10 +210,39 @@ void ioapic_setup() {
 
     if(ioapic_count > 0) {
         assert(alloc_specific_interrupt_vector(0x20) == 0);
+        assert(alloc_specific_interrupt_vector(0x21) == 0);
 
         ioapic_map_irq(&ioapics[0], 0, 0x20, lapic_get_id());
         ioapic_unmask_irq(0);
     }
 
     printf("setup %d ioapics\n", ioapic_count);
+}
+
+
+void interrupts_route_irq(uint8_t irq, uint8_t vector) {
+    if(ioapic_count == 0) {
+        printf("interrupts_route_irq: no ioapics found, cannot route IRQ %u\n", irq);
+        return;
+    }
+
+    ioapic_map_irq(&ioapics[0], irq, vector, lapic_get_id());
+}
+
+void interrupts_unmask_irq(uint8_t irq) {
+    if(ioapic_count == 0) {
+        printf("interrupts_unmask_irq: no ioapics found, cannot unmask IRQ %u\n", irq);
+        return;
+    }
+
+    ioapic_unmask_irq(irq);
+}
+
+void interrupts_mask_irq(uint8_t irq) {
+    if(ioapic_count == 0) {
+        printf("interrupts_mask_irq: no ioapics found, cannot mask IRQ %u\n", irq);
+        return;
+    }
+
+    ioapic_mask_irq(irq);
 }

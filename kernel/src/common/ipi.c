@@ -25,7 +25,7 @@ void ipi_handler(interrupt_frame_t* frame) {
 
 void ipi_init_bsp(void) {
     g_ipi_structs = (ipi_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(ipi_t) * arch_get_core_count());
-    g_ipi_vector = alloc_interrupt_vector(IRQL_DISPATCH);
+    g_ipi_vector = alloc_interrupt_vector(3);
 
     g_ipi_structs[arch_get_core_id()].ready = 1;
     interrupts_register_handler(g_ipi_vector, ipi_handler);
