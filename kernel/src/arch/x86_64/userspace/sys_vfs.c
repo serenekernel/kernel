@@ -31,7 +31,7 @@ syscall_ret_t syscall_sys_open(virt_addr_t pathname_str, size_t pathname_len, ui
 
     (void) flags; // @todo:
     (void) mode; // @todo:
-    LOG_INFO("syscall_sys_stat: pid=%lu, pathname=%s\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, pathname);
+    LOG_INFO("syscall_sys_open: pid=%lu, pathname=%s\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, pathname);
 
     vfs_node_t* node;
     if(vfs_lookup(&VFS_MAKE_ABS_PATH(pathname), &node) != VFS_RESULT_OK) { return SYSCALL_RET_ERROR(ERROR_NOENT); }
@@ -47,10 +47,11 @@ syscall_ret_t syscall_sys_open(virt_addr_t pathname_str, size_t pathname_len, ui
 }
 
 syscall_ret_t syscall_sys_read(uint64_t fd, virt_addr_t buf, size_t count) {
+    LOG_INFO("syscall_sys_read: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
+
     if(count == 0) { return SYSCALL_RET_VALUE(0); }
     if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
-    LOG_INFO("syscall_sys_read: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
 
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
     fd_data_t* node = fd_store_get_fd(store, fd);
@@ -70,10 +71,11 @@ syscall_ret_t syscall_sys_read(uint64_t fd, virt_addr_t buf, size_t count) {
 }
 
 syscall_ret_t syscall_sys_write(uint64_t fd, virt_addr_t buf, size_t count) {
+    LOG_INFO("syscall_sys_write: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
+
     if(count == 0) { return SYSCALL_RET_VALUE(0); }
     if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, buf, count)) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
-    LOG_INFO("syscall_sys_write: pid=%lu, fd=%d, count=%lu\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd, count);
 
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
     fd_data_t* node = fd_store_get_fd(store, fd);
@@ -196,8 +198,8 @@ syscall_ret_t stat_internal(serene_stat_t* statbuf, vfs_node_t* vfs_node) {
 }
 
 syscall_ret_t syscall_sys_stat(uint64_t fd, uint64_t statbuf) {
-    if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, statbuf, sizeof(serene_stat_t))) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
     LOG_INFO("syscall_sys_stat: pid=%lu, fd=%d\n", CPU_LOCAL_GET_CURRENT_THREAD()->common.process->pid, fd);
+    if(!validate_user_buffer(CPU_LOCAL_GET_CURRENT_THREAD()->common.process, statbuf, sizeof(serene_stat_t))) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
     fd_store_t* store = CPU_LOCAL_GET_CURRENT_THREAD()->common.process->fd_store;
     fd_data_t* node = fd_store_get_fd(store, fd);
@@ -220,12 +222,12 @@ syscall_ret_t syscall_sys_stat_at(uint64_t fd, uint64_t path, size_t path_len, u
     memcpy(pathname, (const void*) path, path_len);
     pathname[path_len] = '\0';
     arch_restore_uap(__prev);
-
     process_t* process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
+    LOG_INFO("syscall_sys_stat_at: pid=%lu, fd=%d, path=%s\n", process->pid, fd, pathname);
+
 
     vfs_path_t vfs_path;
 
-    LOG_INFO("syscall_sys_stat_at: pid=%lu, fd=%d, path=%s\n", process->pid, fd, pathname);
     if(pathname[0] == '/') {
         vfs_path.node = nullptr;
         vfs_path.rel_path = pathname;

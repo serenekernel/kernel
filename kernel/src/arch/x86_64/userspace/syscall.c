@@ -10,7 +10,7 @@
 #include <common/userspace/sys_vfs.h>
 #include <common/userspace/userspace.h>
 
-#define SYSTRACE_ENABLED 1
+#define SYSTRACE_ENABLED 0
 void x86_64_handle_syscall();
 
 typedef syscall_ret_t (*fn_syscall_handler0_t)();
@@ -107,7 +107,7 @@ syscall_ret_t x86_64_dispatch_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg
     if(syscall_nr >= MAX_SYSCALL_NUMBER) {
 #if SYSTRACE_ENABLED == 1
         printf(
-            COLORIZE("systrace |", "95") " %d:%d - (0x%llx) %s(0x%llx, 0x%llx, 0x%llx, 0x%llx, 0x%llx, 0x%llx) = %s (0x%llx)\n",
+            COLORIZE("strc |", "95") " %d:%d - (0x%llx) %s(0x%llx, 0x%llx, 0x%llx, 0x%llx, 0x%llx, 0x%llx) = %s (0x%llx)\n",
             thread->common.process->pid,
             thread->common.tid,
             syscall_nr,
@@ -129,7 +129,7 @@ syscall_ret_t x86_64_dispatch_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg
     assert(entry.num_params <= 6 && "syscall entry has too many parameters");
 #if SYSTRACE_ENABLED == 1
     char systrace_buf[1024];
-    int index = snprintf(systrace_buf, 1024, COLORIZE("systrace |", "95") " %d:%d - (0x%llx) %s(", thread->common.process->pid, thread->common.tid, syscall_nr, convert_syscall_number(syscall_nr));
+    int index = snprintf(systrace_buf, 1024, COLORIZE("strc |", "95") " %d:%d - (0x%llx) %s(", thread->common.process->pid, thread->common.tid, syscall_nr, convert_syscall_number(syscall_nr));
     switch(entry.num_params) {
         case 0:  index += snprintf(systrace_buf + index, 1024 - index, ")"); break;
         case 1:  index += snprintf(systrace_buf + index, 1024 - index, "0x%llx)", arg1); break;
