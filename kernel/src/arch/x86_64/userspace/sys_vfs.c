@@ -259,7 +259,7 @@ syscall_ret_t syscall_sys_getcwd(virt_addr_t buf, size_t size) {
     vfs_result_t res = vfs_path_to(process->cwd, &kernel_buf, &kernel_buf_size);
     if(res != VFS_RESULT_OK) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
 
-    size_t cwd_len = strlen(kernel_buf);
+    size_t cwd_len = strlen(kernel_buf) + 1;
     if(cwd_len > size) { return SYSCALL_RET_ERROR(ERROR_RANGE); }
 
     arch_disable_uap();

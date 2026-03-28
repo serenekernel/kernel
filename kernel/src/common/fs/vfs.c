@@ -144,7 +144,11 @@ vfs_result_t vfs_path_to(vfs_node_t* node, char** out_buf, size_t* out_size) {
     vfs_node_t* parent_node = node->parent;
 
     while(true) {
-        if(parent_node == nullptr) goto done;
+        if(parent_node == nullptr) {
+            buf[0] = '/';
+            buf[1] = '\0';
+            goto done;
+        }
         while(true) {
             size_t offset = 0;
             char* dir_name;
