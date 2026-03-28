@@ -45,7 +45,7 @@ bool rshift_pressed = false;
 bool lctrl_pressed = false;
 bool rctrl_pressed = false;
 
-dpc_t* dpc;
+dpc_t* ps2kbd_dpc_object;
 
 char translate_next_scancode() {
     if(scancode_ring_buffer_tail == scancode_ring_buffer_head) { return 0; }
@@ -108,11 +108,11 @@ void ps2kbd_interrupt_handler(interrupt_frame_t* frame) {
     uint8_t scancode = port_read_u8(I8042_DATA_PORT);
     scancode_ring_buffer[scancode_ring_buffer_head] = scancode;
     scancode_ring_buffer_head = (scancode_ring_buffer_head + 1) % SCANCODE_RING_BUFFER_SIZE;
-    if(!dpc->in_use) dpc_enqueue(dpc, NULL);
+    if(!ps2kbd_dpc_object->in_use) dpc_enqueue(ps2kbd_dpc_object, NULL);
 }
 
 void ps2kbd_init() {
-    dpc = dpc_create(ps2kbd_dpc, false);
+    ps2kbd_dpc_object = dpc_create(ps2kbd_dpc, false);
 
     interrupts_register_handler(0x21, ps2kbd_interrupt_handler);
     interrupts_route_irq(1, 0x21);
