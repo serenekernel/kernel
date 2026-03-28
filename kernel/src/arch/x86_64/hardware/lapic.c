@@ -97,17 +97,17 @@ static void apic_enable_mode_bsp() {
     if(x2apic_mode) {
         msr |= APIC_BASE_X2APIC;
         write_msr(IA32_APIC_BASE_MSR, msr);
-        printf("enabling in x2apic mode\n");
+        LOG_INFO("enabling in x2apic mode\n");
         return;
     }
 
-    printf("x2apic mode not supported, using xapic mode\n");
+    LOG_INFO("x2apic mode not supported, using xapic mode\n");
 
     uint8_t cpuid_result = (uint8_t) (__cpuid(0x80000008, 0, CPUID_EAX) & 0xff);
-    printf("max phys bits: %u\n", cpuid_result);
+    LOG_INFO("max phys bits: %u\n", cpuid_result);
     assert(cpuid_result >= 36 && "physical address bits >= 36");
     assert(cpuid_result + 12 < 64 && "physical address bits + 12 < 64");
-    printf("apic base address: 0x%lx\n", lapic_get_base_address());
+    LOG_INFO("apic base address: 0x%lx\n", lapic_get_base_address());
 }
 
 static void apic_enable_mode_ap(void) {
@@ -205,7 +205,7 @@ void lapic_init_bsp() {
     lapic_configure();
     lapic_timer_init_bsp();
     ioapic_setup();
-    printf("initialized in %s mode for lapic %d (bsp)\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
+    LOG_OKAY("initialized in %s mode for lapic %d (bsp)\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
 }
 
 void lapic_init_ap() {
@@ -214,7 +214,7 @@ void lapic_init_ap() {
 
     lapic_configure();
     lapic_timer_init_ap();
-    printf("initialized in %s mode for lapic %d\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
+    LOG_OKAY("initialized in %s mode for lapic %d\n", x2apic_mode ? "x2APIC" : "xAPIC", lapic_get_id());
 }
 
 void lapic_send_icr(uint32_t apic_id, uint64_t icr) {

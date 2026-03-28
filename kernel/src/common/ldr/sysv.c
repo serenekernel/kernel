@@ -118,7 +118,7 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
 
 
     uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf->size), 16);
-    printf("stack_pointer: %p\n", (void*) stack_pointer);
+    LOG_INFO("stack_pointer: %p\n", (void*) stack_pointer);
     vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, (virt_addr_t) stack_buf->data, stack_buf->size);
 
     return stack_pointer;

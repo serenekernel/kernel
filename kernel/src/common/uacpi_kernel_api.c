@@ -3,6 +3,7 @@
 #include <memory/vmm.h>
 #include <stdio.h>
 #include <uacpi/kernel_api.h>
+#include <uacpi/log.h>
 #include <uacpi/status.h>
 
 // Returns the PHYSICAL address of the RSDP structure via *out_rsdp_address.
@@ -70,8 +71,13 @@ void uacpi_kernel_log(uacpi_log_level level, const uacpi_char* fmt, ...) {
 
 void uacpi_kernel_vlog(uacpi_log_level level, const uacpi_char* fmt, uacpi_va_list args) {
     stdio_lock();
-    nl_printf("[uacpi log %d]: ", level);
+    switch(level) {
+        case UACPI_LOG_ERROR: nl_printf(COLORIZE("fail |", "91") " uacpi: "); break;
+        case UACPI_LOG_WARN:  nl_printf(COLORIZE("warn |", "93") " uacpi: "); break;
+        case UACPI_LOG_DEBUG: [[fallthrough]];
+        case UACPI_LOG_TRACE: [[fallthrough]];
+        case UACPI_LOG_INFO:  nl_printf(COLORIZE("info |", "96") " uacpi: "); break;
+    }
     nl_vprintf(fmt, args);
-    nl_printf("\n");
     stdio_unlock();
 }

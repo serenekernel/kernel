@@ -23,7 +23,7 @@
 
 syscall_ret_t syscall_sys_vm_map(virt_addr_t hint, size_t size, size_t prot, size_t flags, size_t fd, size_t offset) {
     process_t* current_process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
-    printf("vm_map: hint=%p size=%zu prot=0x%lx flags=0x%lx fd=%d offset=0x%lx\n", hint, size, prot, flags, fd, offset);
+    LOG_INFO("vm_map: hint=%p size=%zu prot=0x%lx flags=0x%lx fd=%d offset=0x%lx\n", hint, size, prot, flags, fd, offset);
     SYSCALL_ASSERT_PARAM(size > 0 && size <= (1ULL << 30));
     SYSCALL_ASSERT_PARAM((flags & (MAP_FILE)) == 0);
 
@@ -64,14 +64,14 @@ syscall_ret_t syscall_sys_vm_protect(uint64_t addr, size_t size, size_t prot) {
 
     process_t* current_process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
 
-    printf("vm_protect: addr=%p size=%zu prot=%zu\n", aligned_addr, aligned_size, prot);
+    LOG_INFO("vm_protect: addr=%p size=%zu prot=%zu\n", aligned_addr, aligned_size, prot);
     if(aligned_size == 0) { return SYSCALL_RET_VALUE(0); }
     if(aligned_addr < current_process->allocator->start) {
-        printf("vm_protect: addr=%p is below start=%p\n", aligned_addr, current_process->allocator->start);
+        LOG_WARN("vm_protect: addr=%p is below start=%p\n", aligned_addr, current_process->allocator->start);
         return SYSCALL_RET_ERROR(ERROR_INVAL);
     }
     if(aligned_addr + aligned_size > current_process->allocator->end) {
-        printf("vm_protect: addr=%p is above end=%p\n", aligned_addr + aligned_size, current_process->allocator->end);
+        LOG_WARN("vm_protect: addr=%p is above end=%p\n", aligned_addr + aligned_size, current_process->allocator->end);
         return SYSCALL_RET_ERROR(ERROR_INVAL);
     }
 

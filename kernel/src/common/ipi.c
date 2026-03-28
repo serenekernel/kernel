@@ -18,7 +18,7 @@ void ipi_handler(interrupt_frame_t* frame) {
 
     ipi_t* ipi = &g_ipi_structs[arch_get_core_id()];
     assert(ipi->in_use && "IPI not in use");
-    nl_printf("handling ipi %u for core %u\n", ipi->type, arch_get_core_id());
+    nl_printf("info | handling ipi %u for core %u\n", ipi->type, arch_get_core_id());
     if(ipi->type == IPI_TYPE_TLB_FLUSH) { vm_flush_page_raw(ipi->data.tlb_flush.addr); }
     if(ipi->type == IPI_TYPE_DIE) { arch_die(); }
 }

@@ -103,7 +103,7 @@ thread_t* sched_arch_create_thread_user(process_t* process, virt_addr_t user_sta
 }
 
 void sched_arch_switch(thread_t* t_current, thread_t* t_next) {
-    printf("sched_arch_switch: current=%u, next=%u\n", t_current->tid, t_next->tid);
+    LOG_INFO("sched_arch_switch: current=%u, next=%u\n", t_current->tid, t_next->tid);
     x86_64_thread_t* current = CONTAINER_OF(t_current, x86_64_thread_t, common);
     x86_64_thread_t* next = CONTAINER_OF(t_next, x86_64_thread_t, common);
 

@@ -58,12 +58,12 @@ void userspace_init();
 const char* convert_syscall_number(syscall_nr_t nr);
 const char* convert_syscall_ret(syscall_ret_t ret);
 
-#define SYSCALL_ASSERT_PARAM(cond)                           \
-    do {                                                     \
-        if(!(cond)) {                                        \
-            printf("syscall assertion failed: %s\n", #cond); \
-            return SYSCALL_RET_ERROR(ERROR_INVAL);           \
-        }                                                    \
+#define SYSCALL_ASSERT_PARAM(cond)                             \
+    do {                                                       \
+        if(!(cond)) {                                          \
+            LOG_WARN("syscall assertion failed: %s\n", #cond); \
+            return SYSCALL_RET_ERROR(ERROR_INVAL);             \
+        }                                                      \
     } while(0)
 
 

@@ -18,7 +18,7 @@ typedef struct {
 } winsize_t;
 
 syscall_ret_t syscall_sys_ioctl(uint64_t req, virt_addr_t arg) {
-    printf("[sys_ioctl] req: 0x%llx, arg: 0x%llx\n", req, arg);
+    LOG_INFO("sys_ioctl: req: 0x%llx, arg: 0x%llx\n", req, arg);
     process_t* proc = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
     // @todo: fg process tty
     switch(req) {

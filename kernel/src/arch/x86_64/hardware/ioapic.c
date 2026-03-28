@@ -73,7 +73,7 @@ void ioapic_map_irq(io_apic_t* ioapic, uint8_t irq, uint8_t vector, uint8_t dest
     uint64_t redirect = vector;
     redirect |= IOAPIC_DELIVERY_FIXED;
     redirect |= ((uint64_t) destination << IOAPIC_DEST_SHIFT);
-    printf("Mapping IRQ %u to vector 0x%02X on destination 0x%02X\n", irq, vector, destination);
+    LOG_INFO("Mapping IRQ %u to vector 0x%02X on destination 0x%02X\n", irq, vector, destination);
     ioapic_set_entry(ioapic, irq, redirect);
 }
 
@@ -104,7 +104,7 @@ void ioapic_mask_irq(uint8_t irq) {
         entry |= IOAPIC_MASKED;
         ioapic_set_entry(target_ioapic, actual_irq, entry);
     } else {
-        printf("ioapic_mask_irq: could not find target ioapic for IRQ %u\n", irq);
+        LOG_INFO("ioapic_mask_irq: could not find target ioapic for IRQ %u\n", irq);
     }
 }
 
@@ -135,7 +135,7 @@ void ioapic_unmask_irq(uint8_t irq) {
         entry &= ~IOAPIC_MASKED;
         ioapic_set_entry(target_ioapic, actual_irq, entry);
     } else {
-        printf("ioapic_unmask_irq: could not find target ioapic for IRQ %u\n", irq);
+        LOG_INFO("ioapic_unmask_irq: could not find target ioapic for IRQ %u\n", irq);
     }
 }
 
@@ -143,7 +143,7 @@ void ioapic_unmask_irq(uint8_t irq) {
 void ioapic_init(uint32_t id, phys_addr_t phys_addr) {
     assert(lapic_is_bsp() && "ioapic_init should only be called on BSP");
     if(ioapic_count >= MAX_IOAPICS) {
-        printf("ioapic_init: maximum ioapics reached\n");
+        LOG_INFO("ioapic_init: maximum ioapics reached\n");
         return;
     }
 
@@ -157,25 +157,25 @@ void ioapic_init(uint32_t id, phys_addr_t phys_addr) {
     uint32_t ver = ioapic_read(ioapic, IOAPIC_REG_VER);
     ioapic->max_redirection_entry = ((ver >> 16) & 0xFF) + 1;
 
-    printf("ioapic_init: initialized ioapic id %u at phys 0x%llx virt 0x%llx ver: 0x%08x, redirection entries: %u\n", id, phys_addr, mmio_virt, ver & 0xff, ioapic->max_redirection_entry);
+    LOG_INFO("ioapic_init: initialized ioapic id %u at phys 0x%llx virt 0x%llx ver: 0x%08x, redirection entries: %u\n", id, phys_addr, mmio_virt, ver & 0xff, ioapic->max_redirection_entry);
     for(uint32_t i = 0; i < ioapic->max_redirection_entry; i++) { ioapic_set_entry(ioapic, i, IOAPIC_MASKED); }
 }
 
 void dump_madt_entry(struct acpi_entry_hdr* hdr) {
     if(hdr->type == ACPI_MADT_ENTRY_TYPE_LAPIC) {
         struct acpi_madt_lapic* mhdr = (struct acpi_madt_lapic*) (hdr);
-        printf("MADT/lapic 0x%llx (%d) %d | %d %d 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->uid, mhdr->id, mhdr->flags);
+        LOG_INFO("MADT/lapic 0x%llx (%d) %d | %d %d 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->uid, mhdr->id, mhdr->flags);
     } else if(hdr->type == ACPI_MADT_ENTRY_TYPE_IOAPIC) {
         struct acpi_madt_ioapic* mhdr = (struct acpi_madt_ioapic*) (hdr);
-        printf("MADT/ioapic 0x%llx (%d) %d | %d 0x%llx 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->id, mhdr->address, mhdr->gsi_base);
+        LOG_INFO("MADT/ioapic 0x%llx (%d) %d | %d 0x%llx 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->id, mhdr->address, mhdr->gsi_base);
     } else if(hdr->type == ACPI_MADT_ENTRY_TYPE_INTERRUPT_SOURCE_OVERRIDE) {
         struct acpi_madt_interrupt_source_override* mhdr = (struct acpi_madt_interrupt_source_override*) (hdr);
-        printf("MADT/iso 0x%llx (%d) %d | %d %d 0x%llx 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->bus, mhdr->source, mhdr->gsi, mhdr->flags);
+        LOG_INFO("MADT/iso 0x%llx (%d) %d | %d %d 0x%llx 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->bus, mhdr->source, mhdr->gsi, mhdr->flags);
     } else if(hdr->type == ACPI_MADT_ENTRY_TYPE_LAPIC_NMI) {
         struct acpi_madt_lapic_nmi* mhdr = (struct acpi_madt_lapic_nmi*) (hdr);
-        printf("MADT/lapicnmi 0x%llx (%d) %d | %d %d 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->uid, mhdr->flags, mhdr->lint);
+        LOG_INFO("MADT/lapicnmi 0x%llx (%d) %d | %d %d 0x%llx\n", hdr, hdr->type, hdr->length, mhdr->uid, mhdr->flags, mhdr->lint);
     } else {
-        printf("MADT/unknown 0x%llx (%d) %d\n", hdr, hdr->type, hdr->length);
+        LOG_INFO("MADT/unknown 0x%llx (%d) %d\n", hdr, hdr->type, hdr->length);
     }
 }
 
@@ -196,7 +196,7 @@ uacpi_iteration_decision second_madt_pass(uacpi_handle handle, struct acpi_entry
     (void) handle;
     if(hdr->type == ACPI_MADT_ENTRY_TYPE_INTERRUPT_SOURCE_OVERRIDE) {
         struct acpi_madt_interrupt_source_override* iso_entry = (struct acpi_madt_interrupt_source_override*) hdr;
-        if(iso_entry->source != iso_entry->gsi) { printf("ISO: IRQ %d -> GSI %d\n", iso_entry->source, iso_entry->gsi); }
+        if(iso_entry->source != iso_entry->gsi) { LOG_INFO("ISO: IRQ %d -> GSI %d\n", iso_entry->source, iso_entry->gsi); }
     }
     return UACPI_ITERATION_DECISION_CONTINUE;
 }
@@ -216,13 +216,13 @@ void ioapic_setup() {
         ioapic_unmask_irq(0);
     }
 
-    printf("setup %d ioapics\n", ioapic_count);
+    LOG_OKAY("setup %d ioapics\n", ioapic_count);
 }
 
 
 void interrupts_route_irq(uint8_t irq, uint8_t vector) {
     if(ioapic_count == 0) {
-        printf("interrupts_route_irq: no ioapics found, cannot route IRQ %u\n", irq);
+        LOG_OKAY("interrupts_route_irq: no ioapics found, cannot route IRQ %u\n", irq);
         return;
     }
 
@@ -231,7 +231,7 @@ void interrupts_route_irq(uint8_t irq, uint8_t vector) {
 
 void interrupts_unmask_irq(uint8_t irq) {
     if(ioapic_count == 0) {
-        printf("interrupts_unmask_irq: no ioapics found, cannot unmask IRQ %u\n", irq);
+        LOG_OKAY("interrupts_unmask_irq: no ioapics found, cannot unmask IRQ %u\n", irq);
         return;
     }
 
@@ -240,7 +240,7 @@ void interrupts_unmask_irq(uint8_t irq) {
 
 void interrupts_mask_irq(uint8_t irq) {
     if(ioapic_count == 0) {
-        printf("interrupts_mask_irq: no ioapics found, cannot mask IRQ %u\n", irq);
+        LOG_OKAY("interrupts_mask_irq: no ioapics found, cannot mask IRQ %u\n", irq);
         return;
     }
 

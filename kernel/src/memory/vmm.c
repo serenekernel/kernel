@@ -380,7 +380,7 @@ bool vm_handle_page_fault(vm_fault_reason_t reason, virt_addr_t fault_address) {
         extern char name##_end[];                                                                                                                                                               \
         uintptr_t offset = name##_start - kernel_start;                                                                                                                                         \
         uintptr_t size = name##_end - name##_start;                                                                                                                                             \
-        printf("%s - 0x%llx, 0x%llx\n", #name, offset, size);                                                                                                                                   \
+        LOG_INFO("%s - 0x%llx, 0x%llx\n", #name, offset, size);                                                                                                                                 \
         for(uintptr_t i = offset; i < offset + size; i += PAGE_SIZE_DEFAULT) { vm_map_page(&kernel_allocator, kernel_virt + i, kernel_phys + i, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, map_type); } \
     }
 
@@ -401,7 +401,7 @@ void vm_map_kernel() {
         virt_addr_t virt_base = TO_HHDM(phys_base);
         size_t page_count = ALIGN_UP(current->length, 4096) / 4096;
 
-        printf("0x%016llx -> 0x%016llx (0x%08llx | %s)", phys_base, virt_base, current->length, limine_memmap_type_to_str(current->type));
+        LOG_INFO("0x%016llx -> 0x%016llx (0x%08llx | %s)", phys_base, virt_base, current->length, limine_memmap_type_to_str(current->type));
         if(current->type == LIMINE_MEMMAP_USABLE || current->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE || current->type == LIMINE_MEMMAP_EXECUTABLE_AND_MODULES || current->type == LIMINE_MEMMAP_FRAMEBUFFER ||
            current->type == LIMINE_MEMMAP_RESERVED_MAPPED || current->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE || current->type == LIMINE_MEMMAP_ACPI_NVS)
         {

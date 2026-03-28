@@ -29,7 +29,7 @@ void lapic_timer_init_bsp() {
     uint32_t elapsed = 0xFFFFFFFF - lapic_read(LAPIC_TIMER_CUR_COUNT);
     ticks_per_us = elapsed / 10000ULL;
 
-    printf("apic timer calibrated: %d ticks/us\n", ticks_per_us);
+    LOG_OKAY("apic timer calibrated: %d ticks/us\n", ticks_per_us);
 }
 
 void lapic_timer_init_ap() {

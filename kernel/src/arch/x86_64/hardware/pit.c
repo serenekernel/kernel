@@ -20,7 +20,7 @@ static inline void pit_set_reload(uint16_t reload_value) {
 
 void pit_init(void) {
     pit_set_reload(0xFFFF);
-    printf("initialized at %u Hz\n", (unsigned int) PIT_FREQUENCY);
+    LOG_INFO("initialized at %u Hz\n", (unsigned int) PIT_FREQUENCY);
 }
 
 void pit_sleep_us(uint64_t microseconds) {

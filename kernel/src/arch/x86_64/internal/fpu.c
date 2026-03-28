@@ -47,12 +47,12 @@ void fpu_init_bsp() {
     fpu_init_ap();
     if(__cpuid_is_feature_supported(CPUID_FEATURE_XSAVE)) {
         g_fpu_area_size = __cpuid(0x0d, 0, CPUID_ECX);
-        printf("using xsave with size 0x%llx\n", g_fpu_area_size);
+        LOG_OKAY("using xsave with size 0x%llx\n", g_fpu_area_size);
         assert(g_fpu_area_size > 0);
         g_fpu_save = xsave;
         g_fpu_load = xrstor;
     } else {
-        printf("using legacy fxsave\n");
+        LOG_WARN("using legacy fxsave\n");
         g_fpu_area_size = 512;
         g_fpu_save = fxsave;
         g_fpu_load = fxrstor;
@@ -75,7 +75,7 @@ void fpu_init_ap() {
     cr4 |= 1 << 10; // CR4.OSXMMEXCPT
 
     if(__cpuid_is_feature_supported(CPUID_FEATURE_XSAVE)) {
-        printf("xsave supported\n");
+        LOG_OKAY("xsave supported\n");
         cr4 |= 1 << 18; // CR4.OSXSAVE
         __write_cr4(cr4);
 
@@ -83,11 +83,11 @@ void fpu_init_ap() {
         xcr0 |= 1 << 0; // XCR0.X87
         xcr0 |= 1 << 1; // XCR0.SSE
         if(__cpuid_is_feature_supported(CPUID_FEATURE_AVX)) {
-            printf("avx supported\n");
+            LOG_OKAY("avx supported\n");
             xcr0 |= 1 << 2; // XCR0.AVX
         }
         if(__cpuid_is_feature_supported(CPUID_FEATURE_AVX512)) {
-            printf("avx512 supported\n");
+            LOG_OKAY("avx512 supported\n");
             xcr0 |= 1 << 5; // XCR0.opmask
             xcr0 |= 1 << 6; // XCR0.ZMM_Hi256
             xcr0 |= 1 << 7; // XCR0.Hi16_ZMM

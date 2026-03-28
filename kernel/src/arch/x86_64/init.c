@@ -41,23 +41,23 @@ void setup_protections() {
     uint64_t cr4 = __read_cr4();
     if(__cpuid_is_feature_supported(CPUID_FEATURE_UMIP)) {
         cr4 |= (1 << 11); // cr4.UMIP
-        printf("UMIP: supported\n");
+        LOG_OKAY("UMIP: supported\n");
     } else {
-        printf("UMIP: not supported\n");
+        LOG_WARN("UMIP: not supported\n");
     }
 
     if(__cpuid_is_feature_supported(CPUID_FEATURE_SMEP)) {
         cr4 |= (1 << 20); // cr4.SMEP
-        printf("SMEP: supported\n");
+        LOG_OKAY("SMEP: supported\n");
     } else {
-        printf("SMEP: not supported\n");
+        LOG_WARN("SMEP: not supported\n");
     }
 
     if(__cpuid_is_feature_supported(CPUID_FEATURE_SMAP)) {
-        printf("SMAP: supported\n");
+        LOG_OKAY("SMAP: supported\n");
         cr4 |= (1 << 21); // cr4.SMAP
     } else {
-        printf("SMAP: not supported\n");
+        LOG_WARN("SMAP: not supported\n");
     }
 
     uint64_t cr0 = __read_cr0();
@@ -101,8 +101,8 @@ void setup_acpi() {
 }
 
 void setup_arch() {
-    printf("CPU Vendor: %s\n", __cpuid_get_vendor_string());
-    printf("CPU Name: %s\n", __cpuid_get_name_string());
+    LOG_INFO("CPU Vendor: %s\n", __cpuid_get_vendor_string());
+    LOG_INFO("CPU Name: %s\n", __cpuid_get_name_string());
 
     setup_gdt();
     dpc_init_queue();
@@ -119,7 +119,7 @@ void init_aps() {
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
         if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
 
-        printf("Starting AP with lapic id %u\n", mp_request.response->cpus[i]->lapic_id);
+        LOG_OKAY("Starting AP with lapic id %u\n", mp_request.response->cpus[i]->lapic_id);
         atomic_store(&mp_request.response->cpus[i]->goto_address, &arch_init_ap);
         while(__atomic_load_n(&arch_ap_finished, __ATOMIC_RELAXED) == 0) { arch_pause(); }
     }
@@ -133,7 +133,7 @@ void arch_init_bsp() {
 
     interrupts_enable();
     assert(irql_get() == IRQL_PASSIVE);
-    printf("Hello, %s!\n", arch_get_name());
+    LOG_OKAY("Hello, %s!\n", arch_get_name());
 
     ipi_init_bsp();
     init_cpu_locals(mp_request.response->cpu_count);
@@ -141,7 +141,7 @@ void arch_init_bsp() {
 
     uint32_t current_core_id = 1;
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
-        printf("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id);
+        LOG_INFO("CPU %zu: lapic_id: %u processor_id %u\n", i, mp_request.response->cpus[i]->lapic_id, mp_request.response->cpus[i]->processor_id);
         if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
         mp_request.response->cpus[i]->extra_argument = current_core_id++;
     }
@@ -161,15 +161,24 @@ void arch_init_bsp() {
     assert(initramfs_file != nullptr && "initramfs.rdk not found");
 
     vfs_result_t res = vfs_mount(&fs_rdsk_ops, nullptr, (void*) initramfs_file->address);
-    assertf(res == VFS_RESULT_OK, "Failed to mount initramfs %d", res);
-    printf("mounted initramfs\n");
+    if(res != VFS_RESULT_OK) {
+        LOG_FAIL("Failed to mount initramfs (%d)\n", res);
+        arch_die();
+    }
+    LOG_OKAY("mounted initramfs\n");
 
     res = vfs_mount(&fs_stdio_ops, "/dev/console", nullptr);
-    assertf(res == VFS_RESULT_OK, "Failed to mount stdio %d", res);
+    if(res != VFS_RESULT_OK) {
+        LOG_FAIL("Failed to mount stdiofs (%d)\n", res);
+        arch_die();
+    }
 
     vfs_node_t* root_node;
     res = vfs_root(&root_node);
-    assertf(res == VFS_RESULT_OK, "Failed to get root node %d", res);
+    if(res != VFS_RESULT_OK) {
+        LOG_FAIL("Failed to get root node (%d)\n", res);
+        arch_die();
+    }
 
     size_t offset = 0;
     while(1) {
@@ -177,10 +186,7 @@ void arch_init_bsp() {
         res = root_node->ops->readdir(root_node, &offset, &dirent_name);
         if(res == VFS_RESULT_ERR_NOT_FOUND) { break; }
         assertf(res == VFS_RESULT_OK, "Failed to readdir %d", res);
-        if(dirent_name == nullptr) {
-            // printf("dirent is null\n");
-            break;
-        }
+        if(dirent_name == nullptr) { break; }
 
         vfs_node_t* dirent;
         res = root_node->ops->lookup(root_node, dirent_name, &dirent);
@@ -189,7 +195,7 @@ void arch_init_bsp() {
         vfs_node_attr_t attr;
         res = dirent->ops->attr(dirent, &attr);
         assertf(res == VFS_RESULT_OK, "Failed to get dirent attr %d", res);
-        printf("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", dirent_name, attr.size);
+        LOG_INFO("%s: %s %d bytes\n", dirent->type == VFS_NODE_TYPE_DIR ? "dir" : "file", dirent_name, attr.size);
     }
 
     // @todo: this is horrifc
@@ -201,11 +207,11 @@ void arch_init_bsp() {
     assert(loaded_elf && "Failed to load init file");
     virt_addr_t user_stack_top = vmm_try_alloc_demand(process->allocator, 0x00007ffffffff000 - (1024 * PAGE_SIZE_DEFAULT), 1024, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE) + (1024 * PAGE_SIZE_DEFAULT);
     if(!vmm_pre_allocate_demand_pages(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16)) {
-        printf("Failed to pre-allocate user stack pages\n");
-        assert(false);
+        LOG_FAIL("Failed to pre-allocate user stack pages\n");
+        arch_die();
     }
     uintptr_t user_rsp = sysv_user_stack_init(process, user_stack_top, elf_info);
-    printf("user_rsp: %p\n", user_rsp);
+    LOG_INFO("user_rsp: %p\n", user_rsp);
     assert(user_rsp % 16 == 0 && "user_rsp is not 16-byte aligned");
     thread_t* thread = sched_arch_create_thread_user(process, user_rsp, elf_info->executable_entry_point);
 
@@ -215,6 +221,7 @@ void arch_init_bsp() {
     process_add_thread(process, thread);
     sched_thread_schedule(thread);
 
+    LOG_OKAY("Sched Handoff\n");
     sched_arch_handoff();
 
     while(1) { arch_wait_for_interrupt(); }
@@ -236,7 +243,7 @@ void arch_init_ap(struct limine_mp_info* info) {
     userspace_init();
 
     atomic_store(&arch_ap_finished, 1);
-    printf("core %u started\n", info->extra_argument);
+    LOG_OKAY("core %u started\n", info->extra_argument);
 
     sched_init_ap();
     sched_arch_handoff();

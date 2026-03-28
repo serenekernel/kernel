@@ -34,6 +34,6 @@ bool probe_msr(uint32_t msr) {
     uint32_t ret = __probe_msr(msr);
     irql_lower(old_irql);
 
-    printf("probe_msr: ret=%u\n", ret);
+    LOG_INFO("probe_msr: ret=%u\n", ret);
     return ret;
 }

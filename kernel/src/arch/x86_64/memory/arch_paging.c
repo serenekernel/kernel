@@ -292,7 +292,7 @@ void vm_flush_page_dispatch(virt_addr_t addr) {
 
 void __setup_pat() {
     if(!__cpuid_is_feature_supported(CPUID_FEATURE_PAT)) {
-        nl_printf("cpu does not support pat, write combining will be unavailable");
+        nl_printf(COLORIZE("warn | ", "93") "cpu does not support pat, write combining will be unavailable");
         return;
     }
 
@@ -407,7 +407,6 @@ void vm_remap_page(vm_allocator_t* allocator, virt_addr_t virt_addr, phys_addr_t
 
     uint64_t old_entry = pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)];
     uint64_t page_entry = (new_phys_addr & SMALL_PAGE_ADDRESS_MASK) | (old_entry & (~SMALL_PAGE_ADDRESS_MASK));
-    printf("Remapping virtual address 0x%lx to physical address 0x%lx old_entry=0x%lx new_entry=0x%lx\n", virt_addr, new_phys_addr, old_entry, page_entry);
     pt[(uint16_t) virt_to_index(virt_addr, PAGE_LEVEL_PT)] = page_entry | PAGE_PRESENT_BIT;
     vm_flush_page_dispatch(virt_addr);
     arch_memory_barrier();

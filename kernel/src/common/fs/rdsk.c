@@ -95,7 +95,6 @@ static vfs_node_t* create_vfs_dir_node(vfs_t* vfs, rdsk_index_t index) {
     rdsk_dir_t* dir = get_dir(vfs, index);
     node->private_data = dir;
 
-    printf("parent_index: %lu, root_index: %lu, current_index: %lu\n", dir->parent_index, info->header->root_index, index);
     if(dir->parent_index == 0) {
         node->parent = vfs->mount_point;
     } else {

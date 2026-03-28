@@ -34,7 +34,7 @@ void pmm_init() {
     for(size_t i = 0; i < memmap_request.response->entry_count; i++) {
         struct limine_memmap_entry* entry = memmap_request.response->entries[i];
 
-        printf("%s, 0x%016lx - 0x%016lx (%zu)\n", limine_memmap_type_to_str(entry->type), entry->base, entry->base + entry->length, entry->length);
+        LOG_INFO("%s, 0x%016lx - 0x%016lx (%zu)\n", limine_memmap_type_to_str(entry->type), entry->base, entry->base + entry->length, entry->length);
 
         if(entry->type == LIMINE_MEMMAP_USABLE) {
             phys_addr_t start = ALIGN_UP(entry->base, PAGE_SIZE_DEFAULT);
