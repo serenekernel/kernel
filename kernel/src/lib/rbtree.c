@@ -242,72 +242,61 @@ rb_node_t* rb_find_first(rb_tree_t* tree) {
     rb_node_t* current = tree->root;
     if(current == nullptr) return nullptr;
 
-    while(current->left != nullptr) {
-        current = current->left;
-    }
+    while(current->left != nullptr) { current = current->left; }
 
     return current;
 }
 
+rb_node_t* rb_find(rb_tree_t* tree, size_t search_value, rb_search_type_t search_type) {
+    rb_node_t* nearest_node = nullptr;
+    size_t nearest_value = 0;
 
-rb_node_t* rb_find_exact(rb_tree_t* tree, size_t needle) {
-    rb_node_t* current = tree->root;
+    for(rb_node_t* current = tree->root; current != nullptr;) {
+        size_t current_value = tree->value_of_node(current);
 
-    while(current != nullptr) {
-        size_t value = tree->value_of_node(current);
-        if(value == needle) return current;
-        current = (needle > value) ? current->right : current->left;
-    }
+        switch(search_type) {
+            case RB_SEARCH_TYPE_EXACT:
+                if(current_value == search_value) return current;
+                current = (search_value > current_value) ? current->right : current->left;
+                break;
 
-    return nullptr;
-}
+            case RB_SEARCH_TYPE_NEAREST:
+                nearest_node = current;
+                current = (search_value > current_value) ? current->right : current->left;
+                break;
 
-rb_node_t* rb_find_lower(rb_tree_t* tree, size_t needle) {
-    rb_node_t* current = tree->root;
-    rb_node_t* last_lower = nullptr;
+            case RB_SEARCH_TYPE_NEAREST_LT: [[fallthrough]];
+            case RB_SEARCH_TYPE_NEAREST_LTE:
+                if(current_value > search_value || (search_type == RB_SEARCH_TYPE_NEAREST_LT && current_value == search_value)) {
+                    current = current->left;
+                    continue;
+                }
 
-    while(current != nullptr) {
-        size_t value = tree->value_of_node(current);;
-        if(value < needle) {
-            last_lower = current;
-            current = current->right;
-        } else {
-            current = current->left;
+                if(nearest_node == nullptr || current_value > nearest_value) {
+                    nearest_node = current;
+                    nearest_value = current_value;
+                }
+
+                current = current->right;
+                break;
+
+            case RB_SEARCH_TYPE_NEAREST_GT: [[fallthrough]];
+            case RB_SEARCH_TYPE_NEAREST_GTE:
+                if(current_value < search_value || (search_type == RB_SEARCH_TYPE_NEAREST_GT && current_value == search_value)) {
+                    current = current->right;
+                    continue;
+                }
+
+                if(nearest_node == nullptr || current_value < nearest_value) {
+                    nearest_node = current;
+                    nearest_value = current_value;
+                }
+
+                current = current->left;
+                break;
         }
     }
-
-    return last_lower;
-}
-
-rb_node_t* rb_find_upper(rb_tree_t* tree, size_t needle) {
-    rb_node_t* current = tree->root;
-    rb_node_t* last_upper = nullptr;
-
-    while(current != nullptr) {
-        size_t value = tree->value_of_node(current);
-        if(value > needle) {
-            last_upper = current;
-            current = current->left;
-        } else {
-            current = current->right;
-        }
-    }
-
-    return last_upper;
-}
-
-rb_node_t* rb_find_within(rb_tree_t* tree, size_t needle) {
-    rb_node_t* current = tree->root;
-    assert(tree->length_of_node != nullptr);
-
-     while(current != nullptr) {
-        size_t start = tree->value_of_node(current);
-        size_t end = start + tree->length_of_node(current);
-        if(start <= needle && needle < end) { return current; }
-        current = (needle >= end) ? current->right : current->left;
-    }
-
-    return nullptr;
+    return nearest_node;
 }
 
 size_t rb_find_first_gap(rb_tree_t* tree, size_t start, size_t end, size_t size) {

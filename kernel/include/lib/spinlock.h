@@ -4,7 +4,7 @@
 #include <common/irql.h>
 #include <stdint.h>
 
-typedef volatile struct {
+typedef struct {
     irql_t __locked_irql;
     uint32_t __lock;
 } spinlock_t;

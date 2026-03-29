@@ -2,9 +2,11 @@
 #include <arch/internal/gdt.h>
 #include <common/cpu_local.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "memory/heap.h"
 
 typedef struct {
     uint16_t limit_low;
@@ -65,20 +67,18 @@ extern void __load_gdt(gdtr_t* gdtr, uint16_t code_sel, uint16_t data_sel, uint1
 #define IST_PAGE_COUNT 4
 
 void setup_gdt() {
-    // Allocate enough pages for the TSS (needs more than 1 page now with I/O bitmap)
-    size_t tss_pages = ALIGN_UP(sizeof(tss_t), PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
-    virt_addr_t tss_virt = vmm_alloc_backed(&kernel_allocator, tss_pages, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
-    virt_addr_t ist1_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
-    virt_addr_t ist2_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
-    virt_addr_t ist3_stack_virt = vmm_alloc_backed(&kernel_allocator, 1, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+    tss_t* tss = (tss_t*) heap_alloc(sizeof(tss_t));
 
-    tss_t* tss = (tss_t*) tss_virt;
+    virt_addr_t ist1_stack_virt = (virt_addr_t) vm_map_anon(g_global_address_space, VM_NO_HINT, 4 * PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, true);
+    virt_addr_t ist2_stack_virt = (virt_addr_t) vm_map_anon(g_global_address_space, VM_NO_HINT, 4 * PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, true);
+    virt_addr_t ist3_stack_virt = (virt_addr_t) vm_map_anon(g_global_address_space, VM_NO_HINT, 4 * PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, true);
+
     // #NMI
-    tss->ist[1] = ist1_stack_virt + PAGE_SIZE_DEFAULT;
+    tss->ist[1] = ist1_stack_virt + (4 * PAGE_SIZE_DEFAULT);
     // #DF
-    tss->ist[2] = ist2_stack_virt + PAGE_SIZE_DEFAULT;
+    tss->ist[2] = ist2_stack_virt + (4 * PAGE_SIZE_DEFAULT);
     // #MC
-    tss->ist[3] = ist3_stack_virt + PAGE_SIZE_DEFAULT;
+    tss->ist[3] = ist3_stack_virt + (4 * PAGE_SIZE_DEFAULT);
 
     gdt_set_tss(tss);
     CPU_LOCAL_WRITE(cpu_tss, tss);

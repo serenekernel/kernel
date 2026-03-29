@@ -48,3 +48,4 @@ typedef struct {
 
 #define PFLAGS_EXECUTE (1 << 0)
 #define PFLAGS_WRITE (1 << 1)
+#define PFLAGS_READ (1 << 2)

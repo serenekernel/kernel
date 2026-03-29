@@ -6,7 +6,7 @@
 #include <common/userspace/sys_proc.h>
 #include <common/userspace/userspace.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdio.h>
 
 
@@ -29,18 +29,16 @@ syscall_ret_t syscall_sys_vm_map(virt_addr_t hint, size_t size, size_t prot, siz
 
     // @todo: handle prot none
 
-    vm_flags_t vm_flags = VM_READ_ONLY;
-    if(prot & PROT_WRITE) { vm_flags |= VM_READ_WRITE; }
-    if(prot & PROT_EXEC) { vm_flags |= VM_EXECUTE; }
+    vm_protection_t vm_prot;
+    if(prot & PROT_READ) { vm_prot.read = true; }
+    if(prot & PROT_WRITE) { vm_prot.write = true; }
+    if(prot & PROT_EXEC) { vm_prot.execute = true; }
 
-    uintptr_t vaddr;
-    if(flags & MAP_FIXED) {
-        vaddr = vmm_alloc_fixed(current_process->allocator, hint, ALIGN_UP(size, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, vm_flags, true);
-        if(vaddr == 0) { return SYSCALL_RET_ERROR(ERROR_INVAL); }
-    } else {
-        vaddr = vmm_alloc_backed(current_process->allocator, ALIGN_UP(size, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, vm_flags, true);
-    }
+    uint64_t vm_flags = VM_FLAG_NONE;
+    if(flags & MAP_FIXED) { vm_flags |= VM_FLAG_FIXED; }
 
+    virt_addr_t vaddr = (virt_addr_t) vm_map_anon(current_process->address_space, (void*) hint, ALIGN_UP(size, PAGE_SIZE_DEFAULT), vm_prot, VM_CACHE_NORMAL, vm_flags);
+    if(vaddr == 0) { return SYSCALL_RET_ERROR(ERROR_INVAL); }
     return SYSCALL_RET_VALUE(vaddr);
 }
 
@@ -48,41 +46,21 @@ syscall_ret_t syscall_sys_vm_unmap(uint64_t addr, size_t size) {
     (void) size;
     process_t* current_process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
     SYSCALL_ASSERT_PARAM(addr != 0);
-    vmm_free(current_process->allocator, addr);
+    vm_unmap(current_process->address_space, (void*) addr, size);
     return SYSCALL_RET_VALUE(0);
 }
 
 
 syscall_ret_t syscall_sys_vm_protect(uint64_t addr, size_t size, size_t prot) {
-    (void) size;
-    uint64_t aligned_addr = ALIGN_DOWN(addr, PAGE_SIZE_DEFAULT);
-    size_t aligned_size = ALIGN_UP(size, PAGE_SIZE_DEFAULT);
-
-    vm_flags_t vm_flags = VM_READ_ONLY;
-    if(prot & PROT_WRITE) { vm_flags |= VM_READ_WRITE; }
-    if(prot & PROT_EXEC) { vm_flags |= VM_EXECUTE; }
+    vm_protection_t vm_prot;
+    if(prot & PROT_READ) { vm_prot.read = true; }
+    if(prot & PROT_WRITE) { vm_prot.write = true; }
+    if(prot & PROT_EXEC) { vm_prot.execute = true; }
 
     process_t* current_process = CPU_LOCAL_GET_CURRENT_THREAD()->common.process;
 
-    LOG_INFO("vm_protect: addr=%p size=%zu prot=%zu\n", aligned_addr, aligned_size, prot);
-    if(aligned_size == 0) { return SYSCALL_RET_VALUE(0); }
-    if(aligned_addr < current_process->allocator->start) {
-        LOG_WARN("vm_protect: addr=%p is below start=%p\n", aligned_addr, current_process->allocator->start);
-        return SYSCALL_RET_ERROR(ERROR_INVAL);
-    }
-    if(aligned_addr + aligned_size > current_process->allocator->end) {
-        LOG_WARN("vm_protect: addr=%p is above end=%p\n", aligned_addr + aligned_size, current_process->allocator->end);
-        return SYSCALL_RET_ERROR(ERROR_INVAL);
-    }
+    LOG_INFO("vm_protect: addr=%p size=%zu prot=%zu\n", addr, size, prot);
 
-    for(virt_addr_t i = aligned_addr; i < aligned_addr + aligned_size; i += PAGE_SIZE_DEFAULT) {
-        phys_addr_t phys_addr;
-        vm_flags_t protection;
-        vm_access_t access;
-        vm_resolve_protections(current_process->allocator, i, &phys_addr, &protection, &access);
-        if(access == VM_ACCESS_KERNEL) { continue; }
-        vm_reprotect_page(current_process->allocator, i, access, VM_CACHE_NORMAL, vm_flags);
-    }
-
+    vm_rewrite_prot(current_process->address_space, (void*) addr, size, vm_prot);
     return SYSCALL_RET_VALUE(0);
 }

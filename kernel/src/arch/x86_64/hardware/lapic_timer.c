@@ -4,7 +4,7 @@
 #include <arch/msr.h>
 #include <common/io.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdint.h>
 #include <stdio.h>
 

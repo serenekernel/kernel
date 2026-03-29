@@ -1,6 +1,6 @@
 #include <common/requests.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdio.h>
 #include <uacpi/kernel_api.h>
 #include <uacpi/log.h>
@@ -37,13 +37,15 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr* out_rsdp_address) {
  *              resulting virtual address 0xF000 + 0xABC => 0xFABC. Return it
  *              to uACPI.
  */
-void* uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len) {
-    const uacpi_phys_addr aligned_addr = ALIGN_DOWN(addr, PAGE_SIZE_DEFAULT);
-    const uacpi_size page_count = ALIGN_UP(len, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
+void* uacpi_kernel_map(uacpi_phys_addr paddr, uacpi_size length) {
+    LOG_INFO("uacpi_kernel_map: mapping addr=%p, length=%zu\n", paddr, length);
+    const uacpi_phys_addr aligned_paddr = ALIGN_DOWN(paddr, PAGE_SIZE_DEFAULT);
+    const uacpi_size alignment_diff = paddr - aligned_paddr;
+    const uacpi_size aligned_length = ALIGN_UP(length + alignment_diff, PAGE_SIZE_DEFAULT);
 
-    virt_addr_t vaddr = vmm_alloc(&kernel_allocator, page_count);
-    vm_map_pages_continuous(&kernel_allocator, vaddr, aligned_addr, page_count, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE);
-    return (void*) (vaddr + (addr - aligned_addr));
+    virt_addr_t vaddr = (virt_addr_t) vm_map_direct(g_global_address_space, VM_NO_HINT, aligned_length, VM_PROT_RW, VM_CACHE_NORMAL, aligned_paddr, VM_FLAG_NONE);
+
+    return (void*) (vaddr + alignment_diff);
 }
 
 /**
@@ -54,11 +56,13 @@ void* uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len) {
  *       virtual address originally returned by the VMM for this mapping
  *       as well as its true length.
  */
-void uacpi_kernel_unmap(void* addr, uacpi_size len) {
-    const uacpi_phys_addr aligned_addr = ALIGN_DOWN(addr, PAGE_SIZE_DEFAULT);
-    const uacpi_size page_count = ALIGN_UP(len, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT;
-    vm_unmap_pages_continuous(&kernel_allocator, aligned_addr, page_count);
-    vmm_free(&kernel_allocator, aligned_addr);
+void uacpi_kernel_unmap(void* addr, uacpi_size length) {
+    LOG_INFO("uacpi_kernel_unmap: unmapping addr=%p, length=%zu\n", addr, length);
+    const uintptr_t aligned_addr = ALIGN_DOWN(addr, PAGE_SIZE_DEFAULT);
+    const uacpi_size alignment_diff = (uintptr_t) addr - aligned_addr;
+    const uacpi_size aligned_length = ALIGN_UP(length + alignment_diff, PAGE_SIZE_DEFAULT);
+
+    vm_unmap(g_global_address_space, (void*) aligned_addr, aligned_length);
 }
 
 UACPI_PRINTF_DECL(2, 3)

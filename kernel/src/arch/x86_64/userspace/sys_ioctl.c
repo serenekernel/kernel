@@ -1,10 +1,8 @@
 #include <arch/cpu_local.h>
 #include <common/tty.h>
 #include <common/userspace/sys_ioctl.h>
-
-#include "memory/memory.h"
-#include "memory/vmm.h"
-
+#include <memory/memory.h>
+#include <memory/vm.h>
 
 #define TIOCGPGRP 0x540F
 #define TIOCSPGRP 0x5410
@@ -24,12 +22,15 @@ syscall_ret_t syscall_sys_ioctl(uint64_t req, virt_addr_t arg) {
     switch(req) {
         case TIOCGPGRP: {
             if(!validate_user_buffer(proc, arg, sizeof(int64_t))) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
-            vm_memcpy(proc->allocator, &kernel_allocator, (virt_addr_t) arg, (virt_addr_t) &g_tty->owner_process_group_id, sizeof(int64_t));
+            int64_t pgid = g_tty->owner_process_group_id;
+            vm_copy_to(proc->address_space, (virt_addr_t) arg, &pgid, sizeof(int64_t));
             return SYSCALL_RET_VALUE(0);
         }
         case TIOCSPGRP: {
             if(!validate_user_buffer(proc, arg, sizeof(int64_t))) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
-            vm_memcpy(&kernel_allocator, proc->allocator, (virt_addr_t) &g_tty->owner_process_group_id, (virt_addr_t) arg, sizeof(int64_t));
+            int64_t pgid;
+            vm_copy_from(&pgid, proc->address_space, (virt_addr_t) arg, sizeof(int64_t));
+            g_tty->owner_process_group_id = pgid;
             return SYSCALL_RET_VALUE(0);
         }
         case TIOCGWINSZ: {
@@ -37,7 +38,7 @@ syscall_ret_t syscall_sys_ioctl(uint64_t req, virt_addr_t arg) {
             if(!validate_user_buffer(proc, arg, sizeof(winsize_t))) { return SYSCALL_RET_ERROR(ERROR_FAULT); }
             ws.ws_col = 80;
             ws.ws_row = 25;
-            vm_memcpy(proc->allocator, &kernel_allocator, (virt_addr_t) arg, (virt_addr_t) &ws, sizeof(winsize_t));
+            vm_copy_to(proc->address_space, (virt_addr_t) arg, &ws, sizeof(winsize_t));
             return SYSCALL_RET_VALUE(0);
         }
         default: return SYSCALL_RET_ERROR(ERROR_INVAL);

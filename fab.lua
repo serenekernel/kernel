@@ -53,7 +53,7 @@ end
 
 if opt_build_type == "debug" then
     table.extend(c_flags, {
-        "-O2",
+        "-O0",
         "-g",
         -- "-fsanitize=undefined",
         "-fno-lto",
@@ -142,7 +142,8 @@ table.extend(kernel_flags, {
     "-Wall",
     "-Wextra",
     "-Wvla",
-    "-Werror"
+    "-Werror",
+    "-Wno-error=unused-function"
 })
 
 local generators = {

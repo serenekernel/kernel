@@ -6,19 +6,24 @@
 #include <memory/pmm.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct pmm_node {
     struct pmm_node* next;
 } pmm_node_t;
 
+
 pmm_node_t* head = NULL;
 spinlock_t pmm_lock = SPINLOCK_INIT;
-phys_addr_t pmm_alloc_page() {
+
+phys_addr_t pmm_alloc_page(pmm_flags_t flags) {
     spinlock_lock(&pmm_lock);
     pmm_node_t* current = head;
     assert(current != NULL && "out of physical memory");
     head = head->next;
     spinlock_unlock(&pmm_lock);
+
+    if(flags & PMM_FLAG_ZERO) { memset(current, 0, PAGE_SIZE_DEFAULT); }
     return (phys_addr_t) FROM_HHDM(current);
 }
 

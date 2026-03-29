@@ -12,9 +12,9 @@ uint64_t process_next_pid = 0;
 list_t process_list = LIST_INIT;
 spinlock_t process_list_lock = SPINLOCK_INIT;
 
-process_t* process_create(vm_allocator_t* allocator) {
+process_t* process_create(vm_address_space_t* allocator) {
     process_t* process = (process_t*) heap_alloc(sizeof(process_t));
-    process->allocator = allocator;
+    process->address_space = allocator;
     process->thread_list = LIST_INIT;
     process->thread_lock = SPINLOCK_INIT;
     process->pid = atomic_fetch_add(&process_next_pid, 1);

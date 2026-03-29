@@ -6,8 +6,7 @@
 #include <common/interrupts.h>
 #include <common/irql.h>
 #include <memory/memory.h>
-
-#include "memory/vmm.h"
+#include <memory/vm.h>
 
 extern void setup_idt_bsp();
 extern void setup_idt_ap();
@@ -57,8 +56,7 @@ void x86_64_dispatch_exception(interrupt_frame_t* frame) {
     if(frame->vector == 0x0E) {
         vm_fault_reason_t reason = VM_FAULT_UKKNOWN;
         if((frame->error & (1 << 0)) == 0) { reason = VM_FAULT_NOT_PRESENT; }
-        if(vm_handle_page_fault(reason, frame->interrupt_data)) { return; }
-
+        if(vm_fault(frame->interrupt_data, reason)) { return; }
         arch_panic_int(frame);
     }
 

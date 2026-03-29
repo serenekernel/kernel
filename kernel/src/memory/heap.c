@@ -1,7 +1,9 @@
 #include <memory/heap.h>
 #include <memory/slab.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <string.h>
+
+#include "memory/memory.h"
 
 #define SLAB_8X_COUNT (sizeof(g_slab_8x_sizes) / sizeof(*g_slab_8x_sizes))
 #define SLAB_128X_COUNT (sizeof(g_slab_128x_sizes) / sizeof(*g_slab_128x_sizes))
@@ -38,7 +40,7 @@ static slab_cache_t* find_cache(size_t size) {
 
 void* heap_alloc(size_t size) {
     if(EXPECT_UNLIKELY(size == 0)) return nullptr;
-    if(EXPECT_UNLIKELY(size > g_slab_other_sizes[SLAB_OTHER_COUNT - 1])) return (void*) vmm_alloc_bytes(&kernel_allocator, size);
+    if(EXPECT_UNLIKELY(size > g_slab_other_sizes[SLAB_OTHER_COUNT - 1])) return (void*) vm_map_anon(g_global_address_space, VM_NO_HINT, ALIGN_UP(size, PAGE_SIZE_DEFAULT), VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_NONE);
     return slab_cache_alloc(find_cache(size));
 }
 
@@ -60,7 +62,7 @@ void* heap_reallocarray(void* array, size_t element_size, size_t current_count, 
 
 void heap_free(void* address, size_t size) {
     if(EXPECT_UNLIKELY(address == nullptr)) return;
-    if(EXPECT_UNLIKELY(size > g_slab_other_sizes[SLAB_OTHER_COUNT - 1])) return vmm_free(&kernel_allocator, (virt_addr_t) address);
+    if(EXPECT_UNLIKELY(size > g_slab_other_sizes[SLAB_OTHER_COUNT - 1])) return vm_unmap(g_global_address_space, (void*) address, ALIGN_UP(size, PAGE_SIZE_DEFAULT));
     slab_cache_free(find_cache(size), address);
 }
 

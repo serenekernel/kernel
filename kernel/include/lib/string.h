@@ -1,5 +1,5 @@
 #pragma once
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

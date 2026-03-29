@@ -2,6 +2,7 @@
 
 #include <memory/memory.h>
 #include <stdatomic.h>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef enum ipi_type : uint8_t {
@@ -16,6 +17,7 @@ typedef struct {
     union {
         struct {
             virt_addr_t addr;
+            size_t length;
         } tlb_flush;
     } data;
 } ipi_t;
@@ -24,5 +26,5 @@ typedef struct {
 void ipi_init_bsp(void);
 void ipi_init_ap(void);
 
-void ipi_broadcast_flush_tlb(virt_addr_t addr);
+void ipi_broadcast_flush_tlb(virt_addr_t addr, size_t length);
 void ipi_broadcast_die();

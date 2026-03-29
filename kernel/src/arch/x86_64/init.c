@@ -26,8 +26,9 @@
 #include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
+#include <memory/ptm.h>
 #include <memory/slab.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,31 +73,38 @@ void setup_protections() {
     arch_memory_barrier();
 }
 
+static vm_region_t g_hhdm_region;
+
 void setup_memory() {
     pmm_init();
+    ptm_init_kernel_bsp();
 
-    phys_addr_t highest_phys_address = 0;
+    size_t hhdm_size = 0;
     for(size_t i = 0; i < memmap_request.response->entry_count; i++) {
         struct limine_memmap_entry* entry = memmap_request.response->entries[i];
-        if(entry->base + entry->length > highest_phys_address) { highest_phys_address = entry->base + entry->length; }
+        if(entry->base + entry->length > hhdm_size) { hhdm_size = entry->base + entry->length; }
     }
 
-    virt_addr_t virtual_start = (virt_addr_t) TO_HHDM(highest_phys_address);
+    g_hhdm_region.address_space = g_global_address_space;
+    g_hhdm_region.base = hhdm_request.response->offset;
+    g_hhdm_region.length = hhdm_size;
+    g_hhdm_region.protection = VM_PROT_RW;
+    g_hhdm_region.cache = VM_CACHE_NORMAL;
+    g_hhdm_region.dynamically_backed = false;
+    g_hhdm_region.type = VM_REGION_TYPE_DIRECT;
+    g_hhdm_region.type_data.direct.physical_address = 0;
+    rb_insert(&g_global_address_space->regions_tree, &g_hhdm_region.region_tree_node);
 
-    vmm_kernel_init(&kernel_allocator, virtual_start, virtual_start + 0x800000000);
-    vm_paging_bsp_init(&kernel_allocator);
-
-    vm_map_kernel();
-    vm_address_space_switch(&kernel_allocator);
     slab_cache_init();
     init_heap();
+
 
     setup_protections();
 }
 
 void setup_acpi() {
-    virt_addr_t temp_buffer = vmm_alloc_bytes(&kernel_allocator, 4096);
-    uacpi_status ret = uacpi_setup_early_table_access((void*) temp_buffer, 4096);
+    void* temp_buffer = vm_map_anon(g_global_address_space, VM_NO_HINT, 4096, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO);
+    uacpi_status ret = uacpi_setup_early_table_access(temp_buffer, 4096);
     assertf(!uacpi_unlikely_error(ret), "uacpi_setup_early_table_access error: %s", uacpi_status_to_string(ret));
 }
 
@@ -199,17 +207,17 @@ void arch_init_bsp() {
     }
 
     // @todo: this is horrifc
-    vm_allocator_t* allocator = heap_alloc(sizeof(vm_allocator_t));
-    vmm_user_init(allocator, 0x10000, 0x00007fffffffffff);
-    process_t* process = process_create(allocator);
+    vm_address_space_t* process_as = heap_alloc(sizeof(vm_address_space_t));
+    ptm_init_user(process_as);
+    process_t* process = process_create(process_as);
     elf64_elf_loader_info_t* elf_info;
-    bool loaded_elf = elf_load_file(process, &VFS_MAKE_ABS_PATH("/usr/bin/bash"), &elf_info);
+    bool loaded_elf = elf_load_file(process, &VFS_MAKE_ABS_PATH("/usr/bin/hello"), &elf_info);
     assert(loaded_elf && "Failed to load init file");
-    virt_addr_t user_stack_top = vmm_try_alloc_demand(process->allocator, 0x00007ffffffff000 - (1024 * PAGE_SIZE_DEFAULT), 1024, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE) + (1024 * PAGE_SIZE_DEFAULT);
-    if(!vmm_pre_allocate_demand_pages(process->allocator, 0x00007ffffffff000 - (16 * PAGE_SIZE_DEFAULT), 16)) {
-        LOG_FAIL("Failed to pre-allocate user stack pages\n");
-        arch_die();
-    }
+    size_t stack_virt_size = 1024 * PAGE_SIZE_DEFAULT;
+    virt_addr_t user_stack = (virt_addr_t) vm_map_anon(process_as, (void*) (USERSPACE_END - (10 * PAGE_SIZE_DEFAULT) - stack_virt_size), stack_virt_size, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_FIXED | VM_FLAG_ZERO | VM_FLAG_DYNAMICALLY_BACKED);
+    assert(user_stack != 0 && "Failed to allocate user stack");
+    LOG_INFO("user_stack: %p\n", user_stack);
+    virt_addr_t user_stack_top = user_stack + stack_virt_size;
     uintptr_t user_rsp = sysv_user_stack_init(process, user_stack_top, elf_info);
     LOG_INFO("user_rsp: %p\n", user_rsp);
     assert(user_rsp % 16 == 0 && "user_rsp is not 16-byte aligned");
@@ -229,8 +237,7 @@ void arch_init_bsp() {
 
 void arch_init_ap(struct limine_mp_info* info) {
     (void) info;
-    vm_paging_ap_init(&kernel_allocator);
-    vm_address_space_switch(&kernel_allocator);
+    ptm_init_kernel_ap();
 
     init_cpu_local_ap(info->extra_argument);
 

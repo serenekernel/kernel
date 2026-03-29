@@ -11,7 +11,8 @@
 #include <linked_list.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/ptm.h>
+#include <memory/vm.h>
 #include <string.h>
 
 typedef struct {
@@ -75,7 +76,7 @@ x86_64_thread_t* sched_arch_create_thread_common(size_t tid, process_t* process,
 uint32_t g_next_thread_id = 1;
 
 thread_t* sched_arch_create_thread_kernel(virt_addr_t entry) {
-    virt_addr_t kernel_stack_top = vmm_alloc_backed(&kernel_allocator, 16, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+    virt_addr_t kernel_stack_top = (virt_addr_t) vm_map_anon(g_global_address_space, VM_NO_HINT, 16 * PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, true) + (16 * PAGE_SIZE_DEFAULT);
 
     init_stack_kernel_t* init_stack = (init_stack_kernel_t*) (kernel_stack_top - sizeof(init_stack_kernel_t));
     init_stack->entry = entry;
@@ -86,7 +87,7 @@ thread_t* sched_arch_create_thread_kernel(virt_addr_t entry) {
 }
 
 thread_t* sched_arch_create_thread_user(process_t* process, virt_addr_t user_stack_top, virt_addr_t entry) {
-    virt_addr_t kernel_stack_top = vmm_alloc_backed(&kernel_allocator, 16, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE, true) + (16 * PAGE_SIZE_DEFAULT);
+    virt_addr_t kernel_stack_top = (virt_addr_t) vm_map_anon(g_global_address_space, VM_NO_HINT, 16 * PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, true) + (16 * PAGE_SIZE_DEFAULT);
 
     init_stack_user_t* init_stack = (init_stack_user_t*) (kernel_stack_top - sizeof(init_stack_user_t));
     init_stack->entry = entry;
@@ -112,9 +113,9 @@ void sched_arch_switch(thread_t* t_current, thread_t* t_next) {
     if(current->common.process) { fpu_save(current->fpu_area); }
     if(next->common.process) { fpu_load(next->fpu_area); }
     if(current->common.process && next->common.process && current->common.process != next->common.process) {
-        vm_address_space_switch(next->common.process->allocator);
+        ptm_load_address_space(next->common.process->address_space);
     } else if(next->common.process) {
-        vm_address_space_switch(next->common.process->allocator);
+        ptm_load_address_space(next->common.process->address_space);
     }
 
     current->gsbase = read_msr(IA32_KERNEL_GS_BASE_MSR);

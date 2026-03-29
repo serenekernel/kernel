@@ -28,10 +28,17 @@ typedef struct {
 void rb_insert(rb_tree_t* tree, rb_node_t* node);
 void rb_remove(rb_tree_t* tree, rb_node_t* node);
 
+typedef enum {
+    RB_SEARCH_TYPE_EXACT, /* Find an exact match */
+    RB_SEARCH_TYPE_NEAREST, /* Find the nearest match */
+    RB_SEARCH_TYPE_NEAREST_LT, /* Find the nearest match that is less than the search value */
+    RB_SEARCH_TYPE_NEAREST_LTE, /* Find the nearest match that is less than or equals to the search value */
+    RB_SEARCH_TYPE_NEAREST_GT, /* Find the nearest match that is greater than the search value */
+    RB_SEARCH_TYPE_NEAREST_GTE, /* Find the nearest match that is greater than or equals to the search value */
+} rb_search_type_t;
+
 rb_node_t* rb_find_first(rb_tree_t* tree);
-rb_node_t* rb_find_exact(rb_tree_t* tree, size_t needle);
+rb_node_t* rb_find(rb_tree_t* tree, size_t needle, rb_search_type_t search_type);
 rb_node_t* rb_find_within(rb_tree_t* tree, size_t needle);
-rb_node_t* rb_find_lower(rb_tree_t* tree, size_t needle);
-rb_node_t* rb_find_upper(rb_tree_t* tree, size_t needle);
 
 size_t rb_find_first_gap(rb_tree_t* tree, size_t start, size_t end, size_t size);

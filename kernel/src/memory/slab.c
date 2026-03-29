@@ -5,7 +5,7 @@
 #include <linked_list.h>
 #include <memory/memory.h>
 #include <memory/slab.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 
 static spinlock_t g_slab_caches_lock = SPINLOCK_INIT;
 static list_t g_slab_caches = LIST_INIT;
@@ -14,7 +14,8 @@ static slab_cache_t g_alloc_cache;
 static slab_cache_t g_alloc_magazine;
 
 slab_t* slab_cache_create_slab(slab_cache_t* cache) {
-    virt_addr_t block = vmm_alloc_aligned_bytes(&kernel_allocator, cache->slab_size, cache->slab_align);
+    // @todo: holy fucking memory waste
+    virt_addr_t block = ALIGN_UP(vm_map_anon(g_global_address_space, VM_NO_HINT, cache->slab_size + cache->slab_align, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO), cache->slab_align);
 
     slab_t* slab = (slab_t*) block;
     slab->cache = cache;
@@ -28,6 +29,7 @@ slab_t* slab_cache_create_slab(slab_cache_t* cache) {
         void** obj = (void**) (((uintptr_t) slab) + sizeof(slab_t) + (i * cache->object_size));
         *obj = slab->free_list;
         slab->free_list = obj;
+        assert(slab->free_list != nullptr);
         slab->free_count++;
     }
     return slab;
@@ -42,7 +44,13 @@ void slab_cache_destroy_slab(slab_cache_t* cache, slab_t* slab) {
 void* slab_cache_alloc_from_slab(slab_cache_t* cache) {
     spinlock_lock(&cache->slab_lock);
 
-    if(cache->slab_partial_list.count == 0) { list_push(&cache->slab_partial_list, &slab_cache_create_slab(cache)->list_node); }
+    if(cache->slab_partial_list.count == 0) {
+        spinlock_unlock(&cache->slab_lock);
+        slab_t* new_slab = slab_cache_create_slab(cache);
+        spinlock_lock(&cache->slab_lock);
+        list_push(&cache->slab_partial_list, &new_slab->list_node);
+    }
+
     assert(cache->slab_partial_list.head);
     slab_t* slab = CONTAINER_OF(cache->slab_partial_list.head, slab_t, list_node);
     assert(slab->free_count > 0);
@@ -70,6 +78,7 @@ void slab_cache_free_to_slab(slab_cache_t* cache, void* ptr) {
     }
 
     *(void**) ptr = slab->free_list;
+    assert(ptr != nullptr);
     slab->free_list = ptr;
     slab->free_count++;
 
@@ -134,7 +143,7 @@ void* slab_cache_alloc(slab_cache_t* cache) {
     if(!cache->cpu_cached) { return slab_cache_alloc_from_slab(cache); }
 
     irql_t __irql = irql_raise(IRQL_DISPATCH);
-    slab_cpu_cache_t* cc = cache->cpu_cache;
+    slab_cpu_cache_t* cc = &cache->cpu_cache[arch_get_core_id()];
 
     spinlock_lock(&cc->lock);
 
@@ -186,7 +195,7 @@ void slab_cache_free(slab_cache_t* cache, void* ptr) {
 
 
     irql_t __irql = irql_raise(IRQL_DISPATCH);
-    slab_cpu_cache_t* cc = cache->cpu_cache;
+    slab_cpu_cache_t* cc = &cache->cpu_cache[arch_get_core_id()];
 
     spinlock_lock(&cc->lock);
 
@@ -232,7 +241,7 @@ void slab_cache_free(slab_cache_t* cache, void* ptr) {
 
 void slab_cache_init() {
     g_alloc_cache = (slab_cache_t) { .name = "slab-cache",
-                                     .object_size = sizeof(slab_cache_t) + arch_get_core_count() * sizeof(slab_cpu_cache_t),
+                                     .object_size = sizeof(slab_cache_t) + (arch_get_core_count() * sizeof(slab_cpu_cache_t)),
                                      .slab_size = PAGE_SIZE_DEFAULT * 4,
                                      .slab_align = PAGE_SIZE_DEFAULT * 4,
                                      .slab_lock = SPINLOCK_INIT,
@@ -244,7 +253,7 @@ void slab_cache_init() {
                                      .cpu_cached = false };
 
     g_alloc_magazine = (slab_cache_t) { .name = "slab-magazine",
-                                        .object_size = sizeof(slab_magazine_t) + MAGAZINE_SIZE * sizeof(void*),
+                                        .object_size = sizeof(slab_magazine_t) + (MAGAZINE_SIZE * sizeof(void*)),
                                         .slab_size = PAGE_SIZE_DEFAULT * 2,
                                         .slab_align = PAGE_SIZE_DEFAULT * 2,
                                         .slab_lock = SPINLOCK_INIT,

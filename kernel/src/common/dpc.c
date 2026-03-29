@@ -6,7 +6,7 @@
 #include <linked_list.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 
 void dpc_init_queue() {
     dpc_queue_t* queue = (dpc_queue_t*) heap_alloc(sizeof(dpc_queue_t));

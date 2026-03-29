@@ -1,7 +1,7 @@
 #include <common/arch.h>
 #include <common/ldr/elf.h>
 #include <memory/heap.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -46,11 +46,13 @@ bool __allocate_for_image(process_t* process, const elf64_elf_header_t* elf_head
     LOG_INFO("target_allocation = 0x%lx, image_size = 0x%lx\n", target_allocation, image_size);
 
     if(elf_header->e_type == ETYPE_DYN) {
-        uintptr_t allocated = vmm_alloc_backed(process->allocator, image_size / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+        uintptr_t allocated = (virt_addr_t) vm_map_anon(process->address_space, 0, image_size, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO);
         assert(allocated != 0 && "Failed to allocate memory for elf image");
         image_offset = allocated;
     } else {
-        assert(vmm_try_alloc_backed(process->allocator, target_allocation, image_size / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true) == target_allocation && "Failed to allocate memory for elf image");
+        printf("target_allocation = 0x%lx\n", target_allocation);
+        virt_addr_t result_vaddr = (virt_addr_t) vm_map_anon(process->address_space, (void*) target_allocation, image_size, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO | VM_FLAG_FIXED);
+        assert(result_vaddr != 0 && "Failed to allocate memory for elf image");
     }
     LOG_INFO("image_slide = 0x%lx, image_size = 0x%lx\n", image_offset, image_size);
 
@@ -93,15 +95,18 @@ bool __elf_load_image(process_t* process, const elf64_elf_header_t* elf_header, 
     for(size_t i = 0; i < elf_header->e_phnum; i++) {
         if(phdrs[i].p_type != PTYPE_LOAD) { continue; }
 
-        uint64_t flags = VM_READ_ONLY;
-        if(phdrs[i].p_flags & PFLAGS_WRITE) { flags |= VM_READ_WRITE; }
-        if(phdrs[i].p_flags & PFLAGS_EXECUTE) { flags |= VM_EXECUTE; }
-        for(virt_addr_t j = allocation.image_offset + phdrs[i].p_vaddr; j < allocation.image_offset + phdrs[i].p_vaddr + phdrs[i].p_memsz; j += PAGE_SIZE_DEFAULT) { vm_reprotect_page(process->allocator, j, VM_ACCESS_USER, VM_CACHE_NORMAL, flags); }
+        vm_protection_t flags = VM_PROT_NO_ACCESS;
+        if(phdrs[i].p_flags & PFLAGS_READ) { flags.read = true; }
+        if(phdrs[i].p_flags & PFLAGS_WRITE) { flags.write = true; }
+        if(phdrs[i].p_flags & PFLAGS_EXECUTE) { flags.execute = true; }
+        virt_addr_t start_vaddr = MATH_FLOOR(allocation.image_offset + phdrs[i].p_vaddr, PAGE_SIZE_DEFAULT);
+        virt_addr_t end_vaddr = ALIGN_UP(allocation.image_offset + phdrs[i].p_vaddr + phdrs[i].p_memsz, PAGE_SIZE_DEFAULT);
+        for(virt_addr_t j = start_vaddr; j < end_vaddr; j += PAGE_SIZE_DEFAULT) { vm_rewrite_prot(process->address_space, (void*) j, PAGE_SIZE_DEFAULT, flags); }
 
         virt_addr_t phdr_data = (virt_addr_t) heap_alloc(phdrs[i].p_filesz);
         assert(vfs_read(path, (void*) phdr_data, phdrs[i].p_filesz, phdrs[i].p_offset, nullptr) == VFS_RESULT_OK && "Failed to read program header data");
         LOG_INFO("Loading segment %zu: vaddr=0x%lx, paddr=0x%lx, size=%zu\n", i, allocation.image_offset + phdrs[i].p_vaddr, phdr_data, phdrs[i].p_filesz);
-        vm_memcpy(process->allocator, &kernel_allocator, allocation.image_offset + phdrs[i].p_vaddr, phdr_data, phdrs[i].p_filesz);
+        vm_copy_to(process->address_space, allocation.image_offset + phdrs[i].p_vaddr, (void*) phdr_data, phdrs[i].p_filesz);
         heap_free((void*) phdr_data, phdrs[i].p_filesz);
     }
 

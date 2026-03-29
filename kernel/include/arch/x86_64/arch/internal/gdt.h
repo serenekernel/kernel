@@ -1,7 +1,7 @@
 #pragma once
 #include <memory/memory.h>
 #include <memory/pmm.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdbool.h>
 #include <stdint.h>
 

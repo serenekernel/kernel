@@ -7,7 +7,7 @@
 #include <common/irql.h>
 #include <common/requests.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdint.h>
 #include <stdio.h>
 

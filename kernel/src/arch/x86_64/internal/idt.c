@@ -4,7 +4,7 @@
 #include <common/arch.h>
 #include <common/interrupts.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdint.h>
 
 typedef struct {

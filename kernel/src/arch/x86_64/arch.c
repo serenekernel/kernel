@@ -7,7 +7,7 @@
 #include <common/requests.h>
 #include <memory/memory.h>
 #include <memory/pmm.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdio.h>
 
 const char* arch_get_name(void) {
@@ -109,6 +109,6 @@ uint32_t arch_get_core_count() {
 uint64_t __stack_chk_guard = 0xdeadbeefcafebabe;
 
 __attribute__((noreturn)) void __stack_chk_fail(void) {
-    LOG_FAIL("Stack smashing detected on CPU %u\n", arch_get_core_id());
+    nl_printf("Stack smashing detected on CPU %u\n", arch_get_core_id());
     arch_die();
 }

@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <common/arch.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -101,9 +101,9 @@ void fpu_init_ap() {
 }
 
 void* fpu_alloc_area() {
-    return (void*) vmm_alloc_aligned_bytes(&kernel_allocator, g_fpu_area_size, 512);
+    return (void*) ALIGN_UP(vm_map_anon(g_global_address_space, VM_NO_HINT, 4096, VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO), 512);
 }
 
 void fpu_free_area(void* area) {
-    vmm_free(&kernel_allocator, (virt_addr_t) area);
+    vm_unmap(g_global_address_space, (void*) area, 4096);
 }

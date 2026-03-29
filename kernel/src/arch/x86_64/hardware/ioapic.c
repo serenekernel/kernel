@@ -3,7 +3,7 @@
 #include <common/io.h>
 #include <common/vector_alloc.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <uacpi/acpi.h>
@@ -147,9 +147,9 @@ void ioapic_init(uint32_t id, phys_addr_t phys_addr) {
         return;
     }
 
-    virt_addr_t mmio_virt = vmm_alloc(&kernel_allocator, 1);
-    vm_map_page(&kernel_allocator, mmio_virt, phys_addr, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_WRITE);
-
+    virt_addr_t mmio_virt = (virt_addr_t) vm_map_direct(g_global_address_space, VM_NO_HINT, PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_NORMAL, phys_addr, VM_FLAG_NONE);
+    assert(mmio_virt != 0 && "Failed to map ioapic MMIO region");
+    LOG_INFO("ioapic mapped at mmio_virt 0x%llx for phys 0x%llx\n", mmio_virt, phys_addr);
     ioapic_count++;
     io_apic_t* ioapic = &ioapics[ioapic_count - 1];
     ioapic->id = id;

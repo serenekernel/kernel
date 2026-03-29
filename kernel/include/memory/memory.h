@@ -11,30 +11,27 @@ typedef uintptr_t virt_addr_t;
 
 typedef enum {
     PAGE_SIZE_DEFAULT = ARCH_PAGE_SIZE_DEFAULT,
-    PAGE_SIZE_SMALL = ARCH_PAGE_SIZE_SMALL,
-    PAGE_SIZE_LARGE = ARCH_PAGE_SIZE_LARGE,
-    PAGE_SIZE_HUGE = ARCH_PAGE_SIZE_HUGE
+    PAGE_SIZE_SMALL = ARCH_PAGE_SIZE_4K,
+    PAGE_SIZE_LARGE = ARCH_PAGE_SIZE_2M,
+    PAGE_SIZE_HUGE = ARCH_PAGE_SIZE_1G,
 } page_size_t;
 
-/*
-bit 0: writeable
-bit 1: executable
-bit 2: non-xpresent
-bit 3: global
-bit 4-7: reserved
-*/
-typedef enum {
-    VM_READ_ONLY = 0,
-    VM_READ_WRITE = (1 << 0),
-    VM_EXECUTE = (1 << 1),
-    VM_NON_PRESENT = (1 << 2),
-    VM_GLOBAL = (1 << 3),
-} vm_flags_t;
+typedef struct {
+    bool read    : 1;
+    bool write   : 1;
+    bool execute : 1;
+} vm_protection_t;
+
+#define VM_PROT_NO_ACCESS ((vm_protection_t) { .read = 0, .write = 0, .execute = 0 })
+#define VM_PROT_RO ((vm_protection_t) { .read = 1, .write = 0, .execute = 0 })
+#define VM_PROT_RW ((vm_protection_t) { .read = 1, .write = 1, .execute = 0 })
+#define VM_PROT_RX ((vm_protection_t) { .read = 1, .write = 0, .execute = 1 })
+#define VM_PROT_RWX ((vm_protection_t) { .read = 1, .write = 1, .execute = 1 })
 
 typedef enum {
-    VM_ACCESS_KERNEL,
-    VM_ACCESS_USER,
-} vm_access_t;
+    VM_PRIVILEGE_KERNEL,
+    VM_PRIVILEGE_USER,
+} vm_privilege_t;
 
 typedef enum {
     VM_CACHE_NORMAL,
@@ -44,3 +41,8 @@ typedef enum {
 } vm_cache_t;
 
 const char* limine_memmap_type_to_str(uint64_t type);
+
+#define KERNELSPACE_START 0xFFFF'8000'0000'0000
+#define KERNELSPACE_END ((uintptr_t) -PAGE_SIZE_DEFAULT)
+#define USERSPACE_START (PAGE_SIZE_DEFAULT)
+#define USERSPACE_END (((uintptr_t) 1 << 47) - PAGE_SIZE_DEFAULT)

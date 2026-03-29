@@ -4,8 +4,10 @@
 #include <common/cpu_local.h>
 #include <common/irql.h>
 #include <linked_list.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <string.h>
+
+#include "memory/memory.h"
 
 static volatile kernel_cpu_local_t bsp_cpu_local = { 0 };
 
@@ -35,7 +37,7 @@ void init_cpu_local_bsp() {
 
 void init_cpu_locals(uint32_t core_count) {
     cpu_local_count = core_count;
-    cpu_local_storage = (kernel_cpu_local_t*) vmm_alloc_bytes(&kernel_allocator, sizeof(kernel_cpu_local_t) * cpu_local_count);
+    cpu_local_storage = (kernel_cpu_local_t*) vm_map_anon(g_global_address_space, VM_NO_HINT, ALIGN_UP(sizeof(kernel_cpu_local_t) * cpu_local_count, PAGE_SIZE_DEFAULT), VM_PROT_RW, VM_CACHE_NORMAL, true);
     bsp_cpu_local.lapic_id = lapic_get_id();
     memcpy(cpu_local_storage, (void*) &bsp_cpu_local, sizeof(kernel_cpu_local_t));
     write_msr(IA32_GS_BASE_MSR, (uint64_t) &cpu_local_storage[0]);

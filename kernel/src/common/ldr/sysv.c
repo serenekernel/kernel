@@ -5,7 +5,7 @@
 #include <memory/memory.h>
 #include <string.h>
 
-#include "memory/vmm.h"
+#include "memory/vm.h"
 
 typedef enum : uint64_t {
     AUXV_NULL = 0,
@@ -57,21 +57,21 @@ virt_addr_t create_info_block(process_t* process, size_t argc, size_t envc, char
         return 0;
     }
 
-    uintptr_t arg_block = vmm_alloc_backed(process->allocator, ALIGN_UP(size_of_info_block, PAGE_SIZE_DEFAULT) / PAGE_SIZE_DEFAULT, VM_ACCESS_USER, VM_CACHE_NORMAL, VM_READ_WRITE, true);
+    uintptr_t arg_block = (uintptr_t) vm_map_anon(process->address_space, 0, ALIGN_UP(size_of_info_block, PAGE_SIZE_DEFAULT), VM_PROT_RW, VM_CACHE_NORMAL, VM_FLAG_ZERO);
     if(arg_block == 0) { return 0; }
     uintptr_t offset = 0;
 
 
     for(size_t i = 0; i < argc; i++) {
         size_t len = strlen(argv[i]) + 1;
-        vm_memcpy(process->allocator, &kernel_allocator, (virt_addr_t) (arg_block + offset), (virt_addr_t) argv[i], len);
+        vm_copy_to(process->address_space, (virt_addr_t) (arg_block + offset), (void*) argv[i], len);
         argv_p[i] = arg_block + offset;
         offset += len;
     }
 
     for(size_t i = 0; i < envc; i++) {
         size_t len = strlen(envp[i]) + 1;
-        vm_memcpy(process->allocator, &kernel_allocator, (virt_addr_t) (arg_block + offset), (virt_addr_t) envp[i], len);
+        vm_copy_to(process->address_space, (virt_addr_t) (arg_block + offset), (void*) envp[i], len);
         envc_p[i] = arg_block + offset;
         offset += len;
     }
@@ -111,7 +111,7 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
     insert_auxv(stack_buf, AUXV_PHDR, loader_info->phdr_table);
     insert_auxv(stack_buf, AUXV_PHENT, loader_info->phentsize);
     insert_auxv(stack_buf, AUXV_PHNUM, loader_info->phnum);
-    insert_auxv(stack_buf, AUXV_PAGESZ, PAGE_SIZE_SMALL);
+    insert_auxv(stack_buf, AUXV_PAGESZ, PAGE_SIZE_DEFAULT);
     if(loader_info->interp_base != 0) { insert_auxv(stack_buf, AUXV_BASE, loader_info->interp_base); }
     insert_auxv(stack_buf, AUXV_ENTRY, loader_info->image_entry_point);
     insert_u64(stack_buf, AUXV_NULL);
@@ -119,7 +119,7 @@ virt_addr_t sysv_user_stack_init(process_t* process, virt_addr_t user_stack_top,
 
     uintptr_t stack_pointer = ALIGN_DOWN(user_stack_top - (stack_buf->size), 16);
     LOG_INFO("stack_pointer: %p\n", (void*) stack_pointer);
-    vm_memcpy(process->allocator, &kernel_allocator, stack_pointer, (virt_addr_t) stack_buf->data, stack_buf->size);
+    vm_copy_to(process->address_space, stack_pointer, (void*) stack_buf->data, stack_buf->size);
 
     return stack_pointer;
 }

@@ -6,7 +6,7 @@
 #include <common/cpu_local.h>
 #include <common/interrupts.h>
 #include <common/ipi.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <spinlock.h>
 #include <stdio.h>
 
@@ -129,7 +129,7 @@ __attribute__((noreturn)) void arch_panic_int(interrupt_frame_t* frame) {
     uint64_t cr4 = __read_cr4();
     uint64_t cr8 = __read_cr8();
 
-    uint64_t kernel_cr3 = kernel_allocator.kernel_paging_structures_base;
+    uint64_t kernel_cr3 = g_global_address_space->ptm.ptm_root;
 
     nl_printf("\n");
     nl_printf("cr0 = 0x%016llx\n", cr0);

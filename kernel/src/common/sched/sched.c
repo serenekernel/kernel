@@ -9,7 +9,7 @@
 #include <linked_list.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
-#include <memory/vmm.h>
+#include <memory/vm.h>
 #include <spinlock.h>
 
 #define LAPIC_TIMER_VECTOR 0x20
