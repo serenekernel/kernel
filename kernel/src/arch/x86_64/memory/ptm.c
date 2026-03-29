@@ -11,6 +11,7 @@
 #include <common/ipi.h>
 #include <common/requests.h>
 #include <lib/spinlock.h>
+#include <limine.h>
 #include <memory/heap.h>
 #include <memory/memory.h>
 #include <memory/pagedb.h>
@@ -151,8 +152,6 @@ static void map_page(uint64_t* pml4, uintptr_t vaddr, uintptr_t paddr, page_size
 }
 
 void ptm_map(vm_address_space_t* address_space, uintptr_t vaddr, uintptr_t paddr, size_t length, vm_protection_t prot, vm_cache_t cache, vm_privilege_t privilege, bool global) {
-    // LOG_INFO("map(as: %lx-%lx, vaddr: %lx, paddr: %lx, length: %lx, prot: %c%c%c)\n", address_space->start, address_space->end, vaddr, paddr, length, prot.read ? 'R' : '-', prot.write ? 'W' : '-', prot.execute ? 'X' : '-');
-
     assert(vaddr % ARCH_PAGE_SIZE_4K == 0);
     assert(paddr % ARCH_PAGE_SIZE_4K == 0);
     assert(length % ARCH_PAGE_SIZE_4K == 0);
@@ -177,8 +176,6 @@ void ptm_map(vm_address_space_t* address_space, uintptr_t vaddr, uintptr_t paddr
 }
 
 void ptm_rewrite(vm_address_space_t* address_space, uintptr_t vaddr, size_t length, vm_protection_t prot, vm_cache_t cache, vm_privilege_t privilege, bool global) {
-    // LOG_INFO("rewrite(as: %lx-%lx, vaddr: %lx, length: %lx, prot: %c%c%c)\n", address_space->start, address_space->end, vaddr, length, prot.read ? 'R' : '-', prot.write ? 'W' : '-', prot.execute ? 'X' : '-');
-
     assert(vaddr % ARCH_PAGE_SIZE_4K == 0);
     assert(length % ARCH_PAGE_SIZE_4K == 0);
 
@@ -240,8 +237,6 @@ void ptm_rewrite(vm_address_space_t* address_space, uintptr_t vaddr, size_t leng
 }
 
 void ptm_unmap(vm_address_space_t* address_space, uintptr_t vaddr, size_t length) {
-    // LOG_INFO("unmap(as: %lx-%lx, vaddr: %lx, length: %lx)\n", address_space->start, address_space->end, vaddr, length);
-
     assert(vaddr % ARCH_PAGE_SIZE_4K == 0);
     assert(length % ARCH_PAGE_SIZE_4K == 0);
 
@@ -381,13 +376,6 @@ void map_kernel() {
         if(current->type == LIMINE_MEMMAP_USABLE || current->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE || current->type == LIMINE_MEMMAP_EXECUTABLE_AND_MODULES) {
             ptm_map(g_global_address_space, vaddr, aligned_paddr, aligned_length, VM_PROT_RW, VM_CACHE_NORMAL, VM_PRIVILEGE_KERNEL, true);
         }
-
-        /*
-         *  else if(current->type == LIMINE_MEMMAP_FRAMEBUFFER) {
-             vm_map_pages_continuous(&kernel_allocator, virt_base, phys_base, page_count, VM_ACCESS_KERNEL, VM_CACHE_WRITE_COMBINE, VM_READ_WRITE);
-         } else if(current->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE || current->type == LIMINE_MEMMAP_RESERVED_MAPPED || current->type == LIMINE_MEMMAP_ACPI_NVS) {
-             vm_map_pages_continuous(&kernel_allocator, virt_base, phys_base, page_count, VM_ACCESS_KERNEL, VM_CACHE_NORMAL, VM_READ_ONLY);
-         */
     }
 }
 
@@ -408,11 +396,28 @@ void ptm_init_kernel_bsp() {
 
     uint64_t* pml4 = (uint64_t*) TO_HHDM(g_global_address_space->ptm.ptm_root);
     for(int i = 256; i < 512; i++) { pml4[i] = PAGE_BIT_PRESENT | PAGE_BIT_RW | (alloc_page() & SMALL_PAGE_ADDRESS_MASK); }
-
     map_kernel();
+
     ptm_load_address_space(g_global_address_space);
     printf("ptm\n");
     vm_map_direct(g_global_address_space, (void*) lapic_get_base_address(), PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_DISABLE, FROM_HHDM(lapic_get_base_address()), VM_FLAG_FIXED);
+    vm_map_direct(g_global_address_space, (void*) lapic_get_base_address(), PAGE_SIZE_DEFAULT, VM_PROT_RW, VM_CACHE_DISABLE, FROM_HHDM(lapic_get_base_address()), VM_FLAG_FIXED);
+
+    if(framebuffer_request.response != nullptr) {
+        for(size_t i = 0; i < framebuffer_request.response->framebuffer_count; i++) {
+            struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[i];
+
+            const phys_addr_t paddr = FROM_HHDM(framebuffer->address);
+
+            const phys_addr_t aligned_paddr = ALIGN_DOWN(paddr, PAGE_SIZE_DEFAULT);
+            const virt_addr_t alignment_diff = paddr - aligned_paddr;
+            const size_t aligned_length = ALIGN_UP((framebuffer->width * framebuffer->height * framebuffer->bpp) + alignment_diff, PAGE_SIZE_DEFAULT);
+
+            const void* new_vaddr = vm_map_direct(g_global_address_space, VM_NO_HINT, aligned_length, VM_PROT_RW, VM_CACHE_WRITE_COMBINE, aligned_paddr, VM_FLAG_NONE);
+            printf("framebuffer: 0x%016llx -> 0x%016llx (0x%08llx)\n", aligned_paddr, (virt_addr_t) new_vaddr, framebuffer->width * framebuffer->height * framebuffer->bpp);
+            framebuffer->address = (void*) new_vaddr + alignment_diff;
+        }
+    }
 }
 
 void ptm_init_kernel_ap() {

@@ -78,6 +78,7 @@ static vm_region_t g_hhdm_region;
 void setup_memory() {
     pmm_init();
     ptm_init_kernel_bsp();
+    term_init();
 
     size_t hhdm_size = 0;
     for(size_t i = 0; i < memmap_request.response->entry_count; i++) {
@@ -97,7 +98,6 @@ void setup_memory() {
 
     slab_cache_init();
     init_heap();
-
 
     setup_protections();
 }

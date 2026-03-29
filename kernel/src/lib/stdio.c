@@ -26,7 +26,7 @@ void sink_debug(char* c) {
     }
 }
 
-struct flanterm_context* ft_ctx = NULL;
+static struct flanterm_context* ft_ctx = NULL;
 
 void sink_flanterm(char* c) {
     while(*c != '\0') {
