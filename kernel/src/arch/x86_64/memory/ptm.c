@@ -81,7 +81,7 @@ static uint64_t privilege_to_x86_flags(vm_privilege_t privilege) {
 static uint64_t cache_to_x86_flags(vm_cache_t cache, page_size_t page_size) {
     switch(cache) {
         case VM_CACHE_NORMAL:        return PAT0;
-        case VM_CACHE_WRITE_COMBINE: return PAT6(PAGE_BIT_PAT(page_size));
+        case VM_CACHE_WRITE_COMBINE: return PAT4(PAGE_BIT_PAT(page_size));
         case VM_CACHE_DISABLE:       return PAT3;
         case VM_CACHE_WRITE_THROUGH: return 0;
     }
