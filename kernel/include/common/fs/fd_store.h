@@ -5,6 +5,7 @@
 typedef struct {
     vfs_node_t* node;
     size_t cursor;
+    size_t ref_count;
 } fd_data_t;
 
 typedef struct {

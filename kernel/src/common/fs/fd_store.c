@@ -14,6 +14,8 @@ fd_store_t* fd_store_create() {
 }
 
 void fd_store_free(fd_store_t* fd_store) {
+    for(size_t i = 0; i < fd_store->size; i++) { fd_store_close(fd_store, i); }
+
     if(fd_store->fds) heap_free(fd_store->fds, fd_store->size * sizeof(fd_data_t*));
     heap_free(fd_store, sizeof(fd_store_t));
 }
@@ -36,6 +38,7 @@ int fd_store_allocate(fd_store_t* fd_store, fd_data_t* node) {
         fd_store->fds = heap_realloc(fd_store->fds, old_size, fd_store->capacity * sizeof(fd_data_t*));
         assert(fd_store->fds != NULL);
     }
+    node->ref_count = 1;
     fd_store->fds[index] = node;
     fd_store->size = index + 1;
     spinlock_unlock(&fd_store->lock);
@@ -48,7 +51,12 @@ bool fd_store_close(fd_store_t* fd_store, size_t index) {
 
     fd_data_t* node = fd_store->fds[index];
     fd_store->fds[index] = NULL;
-    heap_free(node, sizeof(fd_data_t));
+
+    size_t res = __atomic_fetch_sub(&node->ref_count, 1, __ATOMIC_SEQ_CST);
+    if(res == 0) {
+        LOG_INFO("Closing fd %zu with ref count 0, freeing\n", index);
+        heap_free(node, sizeof(fd_data_t));
+    }
     return true;
 }
 
