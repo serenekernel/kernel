@@ -123,10 +123,10 @@ void setup_arch() {
 static uint32_t arch_ap_finished = 0;
 
 void init_aps() {
-    __atomic_store_n(&arch_ap_finished, 0, __ATOMIC_RELAXED);
     for(size_t i = 0; i < mp_request.response->cpu_count; i++) {
         if(mp_request.response->cpus[i]->lapic_id == lapic_get_id()) { continue; }
 
+        __atomic_store_n(&arch_ap_finished, 0, __ATOMIC_RELAXED);
         LOG_OKAY("Starting AP with lapic id %u\n", mp_request.response->cpus[i]->lapic_id);
         atomic_store(&mp_request.response->cpus[i]->goto_address, &arch_init_ap);
         while(__atomic_load_n(&arch_ap_finished, __ATOMIC_RELAXED) == 0) { arch_pause(); }
@@ -155,7 +155,7 @@ void arch_init_bsp() {
     }
 
     userspace_init();
-    // init_aps();
+    init_aps();
     sched_init_bsp();
 
     struct limine_file* initramfs_file = nullptr;
@@ -248,6 +248,9 @@ void arch_init_ap(struct limine_mp_info* info) {
     ipi_init_ap();
     fpu_init_ap();
     userspace_init();
+
+    interrupts_enable();
+    assert(irql_get() == IRQL_PASSIVE);
 
     atomic_store(&arch_ap_finished, 1);
     LOG_OKAY("core %u started\n", info->extra_argument);
